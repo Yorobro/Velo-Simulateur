@@ -1,0 +1,63 @@
+services:
+
+  web:
+    build: ./web
+    container_name: velo-php
+    ports:
+      - "8080:80"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:10.11
+    container_name: velo-mariadb
+
+    environment:
+      MARIADB_ROOT_PASSWORD: changeme
+      MARIADB_DATABASE: velo_libre_service
+
+    ports:
+      - "3306:3306"
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./schema_velo_libre_service.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  python:
+    build: .
+    container_name: velo-python
+    profiles:
+      - populate
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    volumes:
+      - ./peuplement_velo.py:/app/peuplement_velo.py:ro
+
+    command: python peuplement_velo.py
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: velo-phpmyadmin
+    ports:
+      - "8081:80"
+
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
