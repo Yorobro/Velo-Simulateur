@@ -48,14 +48,25 @@ Renseigner dans `config/local.php` le port, l'utilisateur et le mot de passe MyS
 
 La connexion peut aussi se régler par variables d'environnement : `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`. `APP_DEBUG=0` masque le détail des erreurs et active le cache des gabarits (`var/cache`).
 
-### Docker
+## Docker
 
-`web/Dockerfile` construit une image PHP 8.3 + Apache servant `public/`. Le mot de passe de la base n'y figure pas : le passer à l'exécution, par exemple dans `docker-compose.yml` :
+`docker-compose.yml` monte tout le projet : base MySQL 8.4, données factices, interface web et phpMyAdmin.
 
-```yaml
-  web:
-    build: ./web
-    environment:
-      DB_HOST: db
-      DB_PASSWORD: changeme
+```bash
+docker compose up --build
 ```
+
+- Interface web : <http://localhost:8090> (comptes de démonstration ci-dessus) ;
+- phpMyAdmin : <http://localhost:8091> (`root` / `changeme`) ;
+- MySQL depuis l'hôte : port `3307`.
+
+Au premier lancement, la base se construit dans l'ordre des scripts : `structure.sql` (service `db`), `peuplement_velo.py` (service `peuplement`, environ une minute), `automatisation.sql` puis `optimisation.sql` (service `automatisation`) ; l'interface démarre ensuite. Les lancements suivants gardent les données du volume `velo_mysql` et rejouent seulement les deux derniers scripts.
+
+Pour tout régénérer (après une modification de `structure.sql`, par exemple) :
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+Le mot de passe et les ports côté hôte se changent par variables d'environnement ou dans un fichier `.env` à la racine : `DB_PASSWORD`, `PORT_WEB`, `PORT_PMA`, `PORT_DB`.

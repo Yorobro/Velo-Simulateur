@@ -1,2 +1,3 @@
 Faker>=30
-PyMySQL>=1.1
+# [rsa] installe cryptography : nécessaire pour l'authentification caching_sha2_password de MySQL 8+
+PyMySQL[rsa]>=1.1

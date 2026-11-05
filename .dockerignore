@@ -1,0 +1,4 @@
+# L'image du générateur n'a besoin que de ces deux fichiers.
+*
+!peuplement_velo.py
+!requirements.txt

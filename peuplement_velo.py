@@ -982,13 +982,18 @@ def ouvrir_base(cfg: argparse.Namespace):
     except pymysql.MySQLError as e:
         sys.exit(f"Connexion impossible à {cfg.utilisateur}@{cfg.hote}:{cfg.port}/{cfg.base} : {e}")
     with cnx.cursor() as c:
+        c.execute("SELECT COUNT(*) FROM utilisateur")
+        deja_remplie = c.fetchone()[0] > 0
+        if deja_remplie and cfg.si_vide:
+            cnx.close()
+            print("La base contient déjà des données : rien à faire (--si-vide).")
+            sys.exit(0)
         c.execute("SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_schema = DATABASE()")
         if c.fetchone()[0]:
             sys.exit("Les triggers d'automatisation.sql sont déjà chargés : ils recréeraient eux-mêmes "
                      "factures et changements d'état.\nRechargez structure.sql, lancez ce script, "
                      "puis automatisation.sql et optimisation.sql.")
-        c.execute("SELECT COUNT(*) FROM utilisateur")
-        if c.fetchone()[0] and not cfg.vider:
+        if deja_remplie and not cfg.vider:
             sys.exit("La base contient déjà des données : relancez avec --vider pour les remplacer.")
     return cnx
 
@@ -1031,7 +1036,10 @@ def lire_arguments(argv=None) -> argparse.Namespace:
     p.add_argument("--maintenant", type=lambda s: dt.datetime.strptime(s, "%Y-%m-%d %H:%M"),
                    default=dt.datetime.now().replace(second=0, microsecond=0),
                    help='date de fin de la simulation, "AAAA-MM-JJ HH:MM" (défaut : maintenant)')
-    p.add_argument("--vider", action="store_true", help="vide les tables avant l'insertion")
+    existant = p.add_mutually_exclusive_group()
+    existant.add_argument("--vider", action="store_true", help="vide les tables avant l'insertion")
+    existant.add_argument("--si-vide", action="store_true",
+                          help="ne fait rien, sans erreur, si la base contient déjà des données (Docker)")
     cfg = p.parse_args(argv)
     if cfg.jours < 30:
         p.error("--jours doit valoir au moins 30")

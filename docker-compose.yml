@@ -1,63 +1,96 @@
+# Réseau de vélos en libre-service : base, données factices, interface web.
+#
+#   docker compose up --build      puis http://localhost:8090 (phpMyAdmin : http://localhost:8091)
+#   docker compose down -v         supprime aussi la base, pour tout régénérer au prochain up
+#
+# Au premier lancement, la base se construit dans l'ordre imposé par les scripts :
+#   db (structure.sql) -> peuplement (peuplement_velo.py) -> automatisation (automatisation.sql
+#   puis optimisation.sql) -> web. Les lancements suivants réutilisent les données du volume.
+#
+# Variables facultatives (environnement ou fichier .env) : DB_PASSWORD, mot de passe root
+# (défaut « changeme ») ; PORT_WEB, PORT_PMA, PORT_DB, ports côté hôte (8090, 8091, 3307).
+
 services:
+
+  db:
+    image: mysql:8.4
+    container_name: velo-mysql
+    command: ["--disable-log-bin"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-changeme}
+      TZ: Europe/Paris
+    ports:
+      - "${PORT_DB:-3307}:3306"   # 3306 est souvent déjà pris par un MySQL local
+    volumes:
+      - velo_mysql:/var/lib/mysql
+      - ./data/structure.sql:/docker-entrypoint-initdb.d/01-structure.sql:ro
+    healthcheck:
+      # En TCP : le serveur temporaire de l'initialisation n'écoute pas le réseau.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root --password=\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  peuplement:
+    build: .
+    container_name: velo-peuplement
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
+      TZ: Europe/Paris
+    # --si-vide : ne fait rien si la base contient déjà des données.
+    # Autres volumes : ajouter par exemple --usagers 5000 --jours 730 (puis down -v et up).
+    command: ["python", "peuplement_velo.py", "--si-vide"]
+
+  automatisation:
+    image: mysql:8.4
+    container_name: velo-automatisation
+    depends_on:
+      peuplement:
+        condition: service_completed_successfully
+    environment:
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - ./data:/sql:ro
+    # Les deux scripts se rejouent sans risque : ils recréent fonctions, procédures, triggers,
+    # vues et index, ce qui applique aussi leurs modifications à chaque up.
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        set -e
+        for f in automatisation optimisation; do
+          echo "Chargement de $$f.sql"
+          mysql -h db -u root --password="$$DB_PASSWORD" velo_libre_service < /sql/$$f.sql
+        done
+        echo "Base prête."
 
   web:
     build: ./web
-    container_name: velo-php
-    ports:
-      - "8080:80"
+    container_name: velo-web
     depends_on:
-      db:
-        condition: service_healthy
-
-  db:
-    image: mariadb:10.11
-    container_name: velo-mariadb
-
+      automatisation:
+        condition: service_completed_successfully
     environment:
-      MARIADB_ROOT_PASSWORD: changeme
-      MARIADB_DATABASE: velo_libre_service
-
+      DB_HOST: db
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
     ports:
-      - "3306:3306"
-
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./schema_velo_libre_service.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-
-  python:
-    build: .
-    container_name: velo-python
-    profiles:
-      - populate
-
-    depends_on:
-      db:
-        condition: service_healthy
-
-    volumes:
-      - ./peuplement_velo.py:/app/peuplement_velo.py:ro
-
-    command: python peuplement_velo.py
+      - "${PORT_WEB:-8090}:80"
 
   phpmyadmin:
     image: phpmyadmin:latest
     container_name: velo-phpmyadmin
-    ports:
-      - "8081:80"
-
-    environment:
-      PMA_HOST: db
-      PMA_PORT: 3306
-
     depends_on:
       db:
         condition: service_healthy
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+    ports:
+      - "${PORT_PMA:-8091}:80"
 
 volumes:
-  mysql_data:
+  velo_mysql:
