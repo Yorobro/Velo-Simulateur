@@ -6,7 +6,8 @@
 --  double).
 --
 --  ORDRE D'EXÉCUTION :
---    structure.sql -> donnes.sql -> automatisation.sql -> optimisation.sql
+--    structure.sql -> peuplement_velo.py (ou donnes.sql) -> automatisation.sql
+--    -> optimisation.sql
 --  Le script remplace certaines vues de automatisation.sql par une version
 --  plus rapide : si automatisation.sql est rejoué, rejouer ensuite ce fichier.
 --  Le script est rejouable (index créés seulement s'ils n'existent pas).

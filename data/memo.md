@@ -9,11 +9,12 @@ Ce mémo résume tout ce que contiennent les scripts SQL de ce dossier. Il prés
 | Fichier | Contenu | Ordre d'exécution |
 |---|---|---|
 | `structure.sql` | Base, tables, clés, contraintes `UNIQUE` et `CHECK`, types `ENUM` | 1 |
-| `donnes.sql` | Jeu de données de démonstration | 2 |
+| `../peuplement_velo.py` | Données factices en grand volume (Faker) : un an d'activité simulée, voir § 11 | 2 |
+| `donnes.sql` | Petit jeu de données écrit à la main, à utiliser **à la place** du script Python | 2 |
 | `automatisation.sql` | Fonctions, procédures, triggers, vues | 3 |
 | `optimisation.sql` | Index, vues réécrites plus rapides, statistiques, événement planifié | 4 |
 
-> `automatisation.sql` se charge **après** les données : ses triggers créent eux-mêmes des factures et des changements d'état. S'il était chargé avant, il créerait des doublons.
+> Les données (script Python ou `donnes.sql`) se chargent **avant** `automatisation.sql` : ses triggers créent eux-mêmes des factures et des changements d'état. S'il était chargé avant, il créerait des doublons. Le script Python refuse d'ailleurs de s'exécuter si les triggers sont déjà présents.
 > `optimisation.sql` remplace six vues de `automatisation.sql`. Si on rejoue `automatisation.sql`, il faut rejouer `optimisation.sql` ensuite.
 > Ces deux scripts peuvent être rejoués : ils suppriment puis recréent leurs objets.
 
@@ -449,3 +450,43 @@ Les index qui existent déjà grâce aux contraintes de `structure.sql` (clés p
 - Le supplément casque n'est stocké nulle part. `restituer_velo` le transmet au trigger par la variable de session `@casque`, puis la remet à NULL.
 - Les généralisations `{complete}` (tout mouvement, signalement ou intervention a son type) ne sont garanties que si l'on passe par les procédures (voir § 2).
 - La collation `utf8mb4_0900_ai_ci` de `structure.sql` est propre à MySQL. Le `docker-compose.yml` utilise MariaDB 10.11 : il faudra la remplacer par `utf8mb4_unicode_ci` si la base tourne sous MariaDB.
+
+---
+
+## 11. Données factices : `peuplement_velo.py`
+
+Le script, à la racine du dépôt, simule l'activité du réseau puis insère le résultat dans la base. Il remplace `donnes.sql` quand on veut beaucoup de données, par exemple pour les statistiques ou le rapport de performances. Les noms, prénoms et adresses viennent de Faker, en français.
+
+```bash
+pip install -r requirements.txt
+python peuplement_velo.py --mot-de-passe secret            # volumes par défaut
+python peuplement_velo.py --usagers 5000 --jours 730 --vider
+```
+
+| Option | Défaut | Rôle |
+|---|---|---|
+| `--hote`, `--port`, `--utilisateur`, `--mot-de-passe`, `--base` | `127.0.0.1`, `3306`, `root`, vide, `velo_libre_service` | Connexion ; aussi lisibles dans `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` |
+| `--usagers` | 3000 | Nombre d'usagers |
+| `--stations` | 40 | Nombre de stations (10 au minimum) |
+| `--velos` | 55 % des bornes en service | Taille de la flotte |
+| `--jours` | 365 | Durée de l'historique |
+| `--trajets-par-jour` | 300 | Nombre moyen de trajets par jour |
+| `--graine` | 2026 | Graine aléatoire : les mêmes options redonnent les mêmes données |
+| `--maintenant` | date courante | Fin de la simulation (`"AAAA-MM-JJ HH:MM"`) |
+| `--vider` | non | Vide les tables avant l'insertion |
+
+**Ce qui est simulé**, dans l'ordre chronologique :
+
+- **Personnes et abonnements** : 4 comptes de démonstration, 2 administrateurs, 5 opérateurs de régulation et 5 de maintenance, puis les usagers. Chaque usager a un profil (annuel, mensuel, tarif réduit ou tickets journée), des renouvellements, des pauses et des abandons. Chaque abonnement a sa facture de souscription.
+- **Réseau** : stations de l'agglomération de Belfort, bornes et flotte (35 % de vélos électriques). Une station est en travaux et une autre hors service, chacune avec son signalement.
+- **Trajets** : demande selon la saison, le jour de la semaine et l'heure (pointes vers 8 h et 17-18 h). Trajets domicile-travail le matin et le soir, balades le week-end. Un trajet n'a lieu que si un vélo est disponible ; à l'arrivée dans une station pleine, l'usager va à la station libre la plus proche. Durée et coût sont calculés comme `fn_cout_trajet`, et la facture est créée si le trajet est payant.
+- **Régulation** : tournées plusieurs fois par jour, des stations pleines vers les stations vides.
+- **Maintenance** : signalements après certains trajets (vraies pannes ou fausses alertes), blocage à distance de vélos défectueux, retrait, réparation, remise en circulation ou réforme ; révisions périodiques ; signalements et interventions sur les stations.
+
+À la fin de la simulation, la base contient aussi des **situations en cours** : locations, une tournée, des vélos en atelier, des signalements ouverts et des interventions de station en cours.
+
+**Comptes de démonstration** : `admin@velo.example.org`, `regulation@velo.example.org`, `maintenance@velo.example.org` et `usager@velo.example.org`, ce dernier avec un abonnement annuel en cours. Le mot de passe est `velo2026` ; c'est le même pour tous les comptes générés (vraie empreinte bcrypt, vérifiable par `password_verify` en PHP).
+
+**Volumes obtenus avec les options par défaut** : environ 3 000 utilisateurs, 11 700 abonnements, 108 000 mouvements dont 93 000 locations, 13 500 transferts, 67 000 factures, 1 300 tournées et 800 signalements. La génération et l'insertion prennent une trentaine de secondes.
+
+**Vérification** : sur ce volume, toutes les règles R1 à R14 sont respectées (positions, bornes jamais partagées, une location à la fois, abonnement valide, états, rôles, dates, montants). Les procédures de `automatisation.sql` fonctionnent sur la base générée : emprunt, restitution, maintenance, tournée et abonnement.

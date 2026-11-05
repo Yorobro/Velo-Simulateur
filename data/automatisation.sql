@@ -5,9 +5,10 @@
 --  velo_libre_service. Ne modifie ni le MCD ni le MLD : aucune table ni
 --  colonne n'est ajoutée.
 --
---  ORDRE D'EXÉCUTION : structure.sql -> donnes.sql -> automatisation.sql
+--  ORDRE D'EXÉCUTION :
+--    structure.sql -> peuplement_velo.py (ou donnes.sql) -> automatisation.sql
 --  (les triggers créent eux-mêmes factures et changements d'état : chargés
---  avant donnes.sql, ils produiraient des doublons).
+--  avant les données, ils produiraient des doublons).
 --  Le script est rejouable : il supprime puis recrée tous ses objets.
 --
 --  SGBD : MySQL 8.4 LTS / 9.x (testé sur MySQL 9.0). N'utilise que des
