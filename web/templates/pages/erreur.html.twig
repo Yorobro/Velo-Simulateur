@@ -1,0 +1,15 @@
+{% extends utilisateur ? 'layout/base.html.twig' : 'layout/auth.html.twig' %}
+
+{% block titre %}{{ titre }}{% endblock %}
+
+{% block contenu %}
+  <div class="erreur">
+    <div class="code">{{ statut }}</div>
+    <h2>{{ titre }}</h2>
+    <p>{{ message }}</p>
+    <a class="btn" href="/">{{ icone('grille', 16) }} Retour au tableau de bord</a>
+    {% if details %}
+      <pre class="bloc-code" style="margin-top: 24px">{{ details }}</pre>
+    {% endif %}
+  </div>
+{% endblock %}

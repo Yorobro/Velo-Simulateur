@@ -1,0 +1,151 @@
+{% extends 'layout/base.html.twig' %}
+{% import 'components/ui.html.twig' as ui %}
+
+{% block titre %}Régulation{% endblock %}
+{% block sous_titre %}<div class="sous-titre">Rééquilibrage des stations et tournées</div>{% endblock %}
+{% block actions %}
+  {% if not tournee %}
+    <form method="post" action="/regulation/tournees">{{ ui.csrf() }}
+      <button class="btn" type="submit">{{ icone('lecture', 16) }} Démarrer une tournée</button></form>
+  {% endif %}
+{% endblock %}
+
+{% block contenu %}
+<div class="pile">
+  <div class="grille g-4">
+    {{ ui.kpi('alerte', 'Stations vides', compte.VIDE ?? 0, (compte.PRESQUE_VIDE ?? 0) ~ ' presque vides', 'danger') }}
+    {{ ui.kpi('station', 'Stations pleines', compte.PLEINE ?? 0, (compte.PRESQUE_PLEINE ?? 0) ~ ' presque pleines', 'warning') }}
+    {{ ui.kpi('ok', 'Stations équilibrées', compte.EQUILIBREE ?? 0, 'sur ' ~ stations|length ~ ' en service', 'success') }}
+    {{ ui.kpi('camion', 'Déplacements proposés', propositions|length, 'vers la station vide la plus proche', 'primary') }}
+  </div>
+
+  {% if tournee %}
+    {% set a_bord = transferts|filter(t => t.date_heure_arrivee is null) %}
+    {% set deposes = transferts|filter(t => t.date_heure_arrivee is not null) %}
+    <div class="carte carte-mise-en-avant">
+      <div class="carte-entete">
+        <span class="kpi-icone ton-primary">{{ icone('camion', 20) }}</span>
+        <div><h2>Tournée n° {{ tournee.id_tournee }} en cours</h2>
+          <p>Démarrée le {{ tournee.date_heure_debut|date_fr }} · {{ a_bord|length }} vélo{{ a_bord|length > 1 ? 's' }} à bord · {{ deposes|length }} déposé{{ deposes|length > 1 ? 's' }}</p></div>
+        <div class="actions">
+          <form method="post" action="/regulation/tournees/{{ tournee.id_tournee }}/cloturer" data-confirmer="Clôturer la tournée ?">
+            {{ ui.csrf() }}<button class="btn btn-secondaire" type="submit" {{ a_bord is not empty or transferts is empty ? 'disabled' }}>
+              {{ icone('stop', 16) }} Clôturer</button></form>
+        </div>
+      </div>
+      <div class="carte-corps grille g-2">
+        <div class="pile">
+          <h3>Charger un vélo</h3>
+          <form method="get" action="/regulation">
+            <select class="champ" name="station" data-auto aria-label="Station de chargement">
+              <option value="">Station de chargement…</option>
+              {% for st in stations_chargement %}
+                <option value="{{ st.id_station }}" {{ st.id_station == station_choisie ? 'selected' }}>{{ st.nom }} — {{ st.mecaniques + st.electriques }} vélo{{ st.mecaniques + st.electriques > 1 ? 's' }}</option>
+              {% endfor %}
+            </select>
+          </form>
+          {% if station_choisie %}
+            {% if velos is empty %}<p class="muted">Aucun vélo disponible dans cette station.</p>{% endif %}
+            <div class="velo-liste">
+              {% for v in velos %}
+                <div class="velo-carte">
+                  <div><strong>Vélo n° {{ v.id_velo }}</strong><small>Borne {{ v.numero_borne }} · {{ v.type_velo|libelle }}</small></div>
+                  <form method="post" action="/regulation/tournees/{{ tournee.id_tournee }}/charger">
+                    {{ ui.csrf() }}<input type="hidden" name="velo" value="{{ v.id_velo }}">
+                    <button class="btn btn-petit" type="submit">Charger</button>
+                  </form>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+        <div class="pile">
+          <h3>Vélos à bord</h3>
+          {% for t in a_bord %}
+            <form class="velo-carte" method="post" action="/regulation/transferts/{{ t.id_mouvement }}/deposer">
+              {{ ui.csrf() }}
+              <div><strong>Vélo n° {{ t.id_velo }}</strong><small>chargé à {{ t.station_depart }}</small></div>
+              <select class="champ champ-petit" name="station" required aria-label="Station de dépôt" style="max-width: 200px; margin-left: auto">
+                <option value="">Déposer à…</option>
+                {% for st in stations_depot %}<option value="{{ st.id_station }}">{{ st.nom }} ({{ st.bornes_libres }})</option>{% endfor %}
+              </select>
+              <button class="btn btn-petit" type="submit">Déposer</button>
+            </form>
+          {% else %}
+            <p class="muted">Aucun vélo à bord.</p>
+          {% endfor %}
+          {% if deposes is not empty %}
+            <h3 style="margin-top: 8px">Déposés</h3>
+            {% for t in deposes %}
+              <div class="etapes"><span>n° {{ t.id_velo }}</span> {{ t.station_depart }} <span class="fleche">{{ icone('fleche', 14) }}</span> {{ t.station_arrivee }}</div>
+            {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="grille g-principal">
+    <div class="carte">
+      <div class="carte-entete"><div><h2>État des stations</h2><p>Écart : vélos en trop (+) ou manquants (−) pour une station à moitié pleine</p></div></div>
+      <div class="table-conteneur">
+        <table class="table table-compacte">
+          <thead><tr><th>Station</th><th>Statut</th><th class="num">Vélos</th><th class="num">Bornes libres</th><th>Remplissage</th><th class="num">Écart</th></tr></thead>
+          <tbody>
+          {% for s in stations %}
+            <tr>
+              <td><a class="lien-ligne" href="/stations/{{ s.id_station }}"><span class="titre-cellule">{{ s.nom }}</span></a></td>
+              <td>{{ ui.badge(s.statut) }}</td>
+              <td class="num">{{ s.velos_disponibles }}</td>
+              <td class="num">{{ s.bornes_libres }}</td>
+              <td>{{ ui.jauge(s.taux_remplissage_pct) }}</td>
+              <td class="num"><strong>{{ s.ecart_equilibre > 0 ? '+' }}{{ s.ecart_equilibre }}</strong></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="pile">
+      <div class="carte">
+        <div class="carte-entete"><h2>Déplacements proposés</h2></div>
+        {% if propositions is empty %}
+          {{ ui.vide('ok', 'Rien à déplacer', 'Aucune station pleine n\'a de station vide à proximité.') }}
+        {% else %}
+          <div class="table-conteneur">
+            <table class="table table-compacte">
+              <tbody>
+              {% for p in propositions %}
+                <tr>
+                  <td><div class="etapes"><strong>{{ p.station_source }}</strong> <span class="fleche">{{ icone('fleche', 14) }}</span> {{ p.station_destination }}</div>
+                    <span class="sous">{{ p.distance_km|nombre(2) }} km</span></td>
+                  <td class="num"><span class="badge badge-primary">{{ p.nb_velos_a_deplacer }} vélo{{ p.nb_velos_a_deplacer > 1 ? 's' }}</span></td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="carte">
+        <div class="carte-entete"><h2>Dernières tournées</h2></div>
+        <div class="table-conteneur">
+          <table class="table table-compacte">
+            <tbody>
+            {% for t in recentes %}
+              <tr>
+                <td><span class="titre-cellule">n° {{ t.id_tournee }}</span><span class="sous">{{ t.operateur }} · {{ t.date_heure_debut|date_fr }}</span></td>
+                <td class="num">{{ t.nb_velos }} vélo{{ t.nb_velos > 1 ? 's' }}</td>
+                <td>{{ t.date_heure_fin ? ui.badge('TERMINEE') : ui.badge('EN_COURS') }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

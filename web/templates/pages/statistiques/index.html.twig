@@ -1,0 +1,125 @@
+{% extends 'layout/base.html.twig' %}
+{% import 'components/ui.html.twig' as ui %}
+
+{% block titre %}Statistiques{% endblock %}
+{% block sous_titre %}<div class="sous-titre">Utilisation du réseau sur les {{ periodes[periode][1] }}</div>{% endblock %}
+{% block actions %}
+  <div class="onglets">
+    {% for cle, p in periodes %}<a href="/statistiques?periode={{ cle }}" class="{{ cle == periode ? 'actif' }}">{{ p[1] }}</a>{% endfor %}
+  </div>
+{% endblock %}
+
+{% block contenu %}
+{% set jours = trajets_par_jour %}
+{% set total = jours|reduce((c, j) => c + j.trajets, 0) %}
+{% set minutes = jours|reduce((c, j) => c + j.trajets * j.duree_moyenne, 0) %}
+{% set recettes_total = recettes|reduce((c, r) => c + r.abonnements + r.locations, 0) %}
+{% set pic = max(departs_par_heure|merge([1])) %}
+{% set flotte = indisponibilite|filter(l => l.type_velo == 'TOUS')|first %}
+
+{% set graphe_jours = {
+  type: 'line',
+  data: {labels: jours|map(j => j.jour|date('d/m')), datasets: [{
+    label: 'Trajets', data: jours|map(j => j.trajets + 0), borderColor: '#0f766e', backgroundColor: 'rgba(15, 118, 110, 0.10)',
+    fill: true, tension: 0.3, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4}]},
+  options: {interaction: {intersect: false, mode: 'index'}, plugins: {legend: {display: false}},
+    scales: {y: {beginAtZero: true, grid: {color: '#eef2f6'}}, x: {grid: {display: false}, ticks: {maxTicksLimit: 12}}}}
+} %}
+{% set graphe_heures = {
+  type: 'bar',
+  data: {labels: (0..23)|map(h => h ~ ' h'), datasets: [{
+    label: 'Départs', data: departs_par_heure,
+    backgroundColor: departs_par_heure|map(v => v >= pic * 0.7 ? '#f59e0b' : '#0f766e'), borderRadius: 4}]},
+  options: {plugins: {legend: {display: false}},
+    scales: {y: {beginAtZero: true, grid: {color: '#eef2f6'}}, x: {grid: {display: false}}}}
+} %}
+{% set graphe_recettes = {
+  type: 'bar',
+  data: {labels: recettes|map(r => r.formule|libelle), datasets: [
+    {label: 'Abonnements', data: recettes|map(r => r.abonnements + 0), backgroundColor: '#0f766e', borderRadius: 4},
+    {label: 'Trajets', data: recettes|map(r => r.locations + 0), backgroundColor: '#f59e0b', borderRadius: 4}]},
+  options: {plugins: {legend: {position: 'bottom'}},
+    scales: {x: {stacked: true, grid: {display: false}}, y: {stacked: true, beginAtZero: true, grid: {color: '#eef2f6'}}}}
+} %}
+
+<div class="pile">
+  <div class="grille g-4">
+    {{ ui.kpi('velo', 'Trajets', total|nombre, (total / max(1, jours|length))|nombre(0) ~ ' par jour en moyenne') }}
+    {{ ui.kpi('chrono', 'Durée moyenne', (total ? minutes / total : 0)|duree, 'par trajet', 'info') }}
+    {{ ui.kpi('euro', 'Recettes facturées', recettes_total|euros, 'abonnements et trajets', 'accent') }}
+    {{ ui.kpi('cle', 'Indisponibilité de la flotte', (flotte.taux_indisponibilite_actuel_pct ?? 0)|nombre(1) ~ ' %',
+               (flotte.taux_indisponibilite_30j_pct ?? 0)|nombre(2) ~ ' % sur 30 jours', 'warning') }}
+  </div>
+
+  <div class="carte">
+    <div class="carte-entete"><div><h2>Trajets par jour</h2><p>Nombre de locations commencées chaque jour</p></div></div>
+    <div class="carte-corps"><div class="carte-graphique haute"><canvas data-graphique="{{ graphe_jours|json_encode|e('html_attr') }}"></canvas></div></div>
+  </div>
+
+  <div class="grille g-2">
+    <div class="carte">
+      <div class="carte-entete"><div><h2>Heures de pointe</h2><p>Départs par heure de la journée (pointes en ambre)</p></div></div>
+      <div class="carte-corps"><div class="carte-graphique"><canvas data-graphique="{{ graphe_heures|json_encode|e('html_attr') }}"></canvas></div></div>
+    </div>
+    <div class="carte">
+      <div class="carte-entete"><div><h2>Recettes par formule</h2><p>Montants facturés sur la période</p></div></div>
+      <div class="carte-corps"><div class="carte-graphique"><canvas data-graphique="{{ graphe_recettes|json_encode|e('html_attr') }}"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="grille g-principal">
+    <div class="carte">
+      <div class="carte-entete"><div><h2>Trajets les plus fréquents</h2><p>Couples station de départ → station d'arrivée</p></div></div>
+      {% if origine_destination is empty %}
+        {{ ui.vide('graphique', 'Aucun trajet sur la période') }}
+      {% else %}
+        <div class="table-conteneur">
+          <table class="table table-compacte">
+            <thead><tr><th>#</th><th>Trajet</th><th class="num">Trajets</th><th class="num">Durée moy.</th></tr></thead>
+            <tbody>
+            {% for od in origine_destination %}
+              <tr>
+                <td class="muted">{{ loop.index }}</td>
+                <td><div class="etapes">{{ od.station_depart }} <span class="fleche">{{ icone('fleche', 14) }}</span> {{ od.station_arrivee }}</div></td>
+                <td class="num"><strong>{{ od.trajets|nombre }}</strong></td>
+                <td class="num">{{ od.duree_moyenne|duree }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="pile">
+      <div class="carte">
+        <div class="carte-entete"><div><h2>Disponibilité de la flotte</h2><p>Aujourd'hui et sur 30 jours</p></div></div>
+        <div class="table-conteneur">
+          <table class="table table-compacte">
+            <thead><tr><th>Type</th><th class="num">En flotte</th><th class="num">Défectueux</th><th class="num">Indispo. 30 j</th></tr></thead>
+            <tbody>
+            {% for l in indisponibilite %}
+              <tr{% if l.type_velo == 'TOUS' %} style="font-weight: 650"{% endif %}>
+                <td>{{ l.type_velo|libelle }}</td>
+                <td class="num">{{ l.velos_en_flotte }}</td>
+                <td class="num">{{ l.defectueux }}</td>
+                <td class="num">{{ (l.taux_indisponibilite_30j_pct ?? 0)|nombre(2) }} %</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <a class="carte carte-corps ligne lien-ligne" href="/statistiques/remplissage">
+        <span class="kpi-icone ton-primary">{{ icone('grille', 20) }}</span>
+        <div><h3>Remplissage des stations par heure</h3><small>Carte de chaleur sur les 30 derniers jours</small></div>
+        <span class="fin">{{ icone('fleche', 18) }}</span>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+{% endblock %}

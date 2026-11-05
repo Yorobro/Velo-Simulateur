@@ -1,0 +1,5 @@
+vendor/
+var/
+config/local.php
+Dockerfile
+.dockerignore

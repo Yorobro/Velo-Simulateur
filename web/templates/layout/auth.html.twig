@@ -1,0 +1,42 @@
+{% import 'components/ui.html.twig' as ui %}
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titre %}{% endblock %} · {{ app_nom }}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230f766e'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/assets/css/app.css">
+</head>
+<body>
+<div class="auth">
+  <section class="auth-visuel">
+    <a class="brand" href="/">
+      <span class="brand-logo">{{ icone('velo', 20) }}</span>
+      <span><strong>{{ app_nom }}</strong><small>Réseau de l'agglomération</small></span>
+    </a>
+    <div>
+      <h2>Le vélo en libre-service, piloté de bout en bout.</h2>
+      <p class="accroche">Disponibilités en temps réel, trajets et factures pour les usagers ; régulation, maintenance et statistiques pour l'exploitation.</p>
+      <div class="auth-points">
+        <div class="auth-point"><span class="pastille">{{ icone('station') }}</span>
+          <div><strong>Stations en temps réel</strong><span>Vélos mécaniques et électriques, bornes libres.</span></div></div>
+        <div class="auth-point"><span class="pastille">{{ icone('chrono') }}</span>
+          <div><strong>Trajets et factures</strong><span>Durée et coût calculés automatiquement.</span></div></div>
+        <div class="auth-point"><span class="pastille">{{ icone('graphique') }}</span>
+          <div><strong>Pilotage du réseau</strong><span>Tournées, maintenance, statistiques.</span></div></div>
+      </div>
+    </div>
+    <small>Projet BD70 · UTBM</small>
+    <span class="auth-roue"></span>
+  </section>
+  <section class="auth-formulaire">
+    <div class="auth-carte">
+      {{ ui.flashes() }}
+      {% block contenu %}{% endblock %}
+    </div>
+  </section>
+</div>
+<script src="/assets/js/app.js" defer></script>
+</body>
+</html>

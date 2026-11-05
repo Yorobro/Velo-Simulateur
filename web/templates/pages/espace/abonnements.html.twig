@@ -1,0 +1,75 @@
+{% extends 'layout/base.html.twig' %}
+{% import 'components/ui.html.twig' as ui %}
+
+{% block titre %}Abonnements{% endblock %}
+{% block sous_titre %}<div class="sous-titre">Formules et historique de vos abonnements</div>{% endblock %}
+
+{% block contenu %}
+<div class="pile">
+  {% if actif %}
+    <div class="alerte alerte-info">{{ icone('ticket') }}
+      <div><strong>Abonnement {{ actif.formule|libelle|lower }} actif</strong> jusqu'au {{ actif.date_fin|jour }}
+        ({{ actif.jours_restants }} jour{{ actif.jours_restants > 1 ? 's' }} restant{{ actif.jours_restants > 1 ? 's' }}).</div>
+    </div>
+  {% endif %}
+
+  <div class="carte">
+    <div class="carte-entete"><div><h2>Nos formules</h2><p>La souscription crée la facture correspondante.</p></div></div>
+    <div class="carte-corps">
+      <div class="formules">
+        {% for f in formules %}
+          <div class="formule{{ f.type == 'MENSUEL' ? ' mise-en-avant' }}">
+            <div class="ligne entre"><h3>{{ f.type|libelle }}</h3>{% if f.type == 'MENSUEL' %}<span class="badge badge-primary">Populaire</span>{% endif %}</div>
+            <div class="prix">{{ f.prix|euros }} <small>/ {{ f.duree_validite_jours == 1 ? 'jour' : f.duree_validite_jours ~ ' jours' }}</small></div>
+            <ul>
+              <li>{{ icone('ok', 14) }} {{ f.duree_gratuite_min }} min offertes par trajet</li>
+              <li>{{ icone('ok', 14) }} {{ f.prix_tranche|euros }} par tranche de {{ f.duree_tranche_min }} min</li>
+              <li>{{ icone('eclair', 14) }} Électrique : + {{ f.supplement_electrique|euros }} par trajet</li>
+              <li>{{ icone('ok', 14) }} Casque : + {{ f.supplement_casque|euros }}</li>
+            </ul>
+            <form method="post" action="/espace/abonnements"
+                  data-confirmer="Souscrire la formule {{ f.type|libelle }} pour {{ f.prix|euros }} ?">
+              {{ ui.csrf() }}<input type="hidden" name="formule" value="{{ f.id_formule }}">
+              <button class="btn btn-bloc{{ f.type == 'MENSUEL' ? '' : ' btn-secondaire' }}" type="submit">Souscrire</button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="carte">
+    <div class="carte-entete"><h2>Mes abonnements</h2></div>
+    {% if abonnements is empty %}
+      {{ ui.vide('ticket', 'Aucun abonnement pour l\'instant') }}
+    {% else %}
+      <div class="table-conteneur">
+        <table class="table">
+          <thead><tr><th>N°</th><th>Formule</th><th>Du</th><th>Au</th><th class="num">Prix</th><th>Statut</th><th></th></tr></thead>
+          <tbody>
+          {% for a in abonnements %}
+            <tr>
+              <td class="mono">{{ a.id_abonnement }}</td>
+              <td><span class="titre-cellule">{{ a.formule|libelle }}</span>
+                {% if a.id_abonnement_precedent %}<span class="sous">renouvelle le n° {{ a.id_abonnement_precedent }}</span>{% endif %}</td>
+              <td>{{ a.date_debut|jour }}</td>
+              <td>{{ a.date_fin|jour }}</td>
+              <td class="num">{{ a.prix|euros }}</td>
+              <td>{{ ui.badge(a.statut) }}</td>
+              <td class="actions">
+                {% if a.id_renouvellement is null and a.formule != 'TICKET_JOURNEE' and a.statut != 'A_VENIR' %}
+                  <form method="post" action="/espace/abonnements/{{ a.id_abonnement }}/renouveler"
+                        data-confirmer="Renouveler cet abonnement {{ a.formule|libelle|lower }} ?">
+                    {{ ui.csrf() }}<button class="btn btn-secondaire btn-petit" type="submit">Renouveler</button>
+                  </form>
+                {% elseif a.id_renouvellement %}<small>renouvelé (n° {{ a.id_renouvellement }})</small>{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

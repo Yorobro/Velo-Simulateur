@@ -1,0 +1,4 @@
+# Apache : toute adresse qui n'est pas un fichier est traitée par index.php
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [QSA,L]

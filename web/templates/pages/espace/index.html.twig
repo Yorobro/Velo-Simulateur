@@ -1,0 +1,162 @@
+{% extends 'layout/base.html.twig' %}
+{% import 'components/ui.html.twig' as ui %}
+
+{% block titre %}Mes trajets{% endblock %}
+{% block sous_titre %}<div class="sous-titre">Bonjour {{ utilisateur.prenom }} !</div>{% endblock %}
+{% block actions %}
+  <a class="btn btn-secondaire" href="/stations">{{ icone('station', 16) }} Voir les stations</a>
+{% endblock %}
+
+{% block contenu %}
+<div class="pile">
+  {% if impayees.nb > 0 %}
+    <div class="alerte alerte-attention">{{ icone('facture') }}
+      <div><strong>{{ impayees.nb }} facture{{ impayees.nb > 1 ? 's' }} à régler</strong> pour un total de {{ impayees.montant|euros }}.</div>
+      <a class="btn btn-accent btn-petit" href="/espace/factures">Voir mes factures</a>
+    </div>
+  {% endif %}
+
+  <div class="grille g-principal">
+    <div class="pile">
+      {% if location %}
+        {# ------------------------------------------------ location en cours #}
+        <div class="carte carte-mise-en-avant">
+          <div class="carte-entete">
+            <span class="kpi-icone ton-info">{{ icone('velo', 20) }}</span>
+            <div><h2>Location en cours</h2><p>Vélo n° {{ location.id_velo }} · emprunté à {{ location.station_depart }}</p></div>
+            <div class="actions">{{ ui.type_velo(location.type_velo) }}</div>
+          </div>
+          <div class="carte-corps">
+            <div class="grille g-3">
+              <div><div class="kpi-libelle">Durée</div>
+                <div class="chrono" data-depuis="{{ location.date_heure_depart|date('Y-m-d\\TH:i:s') }}">{{ location.duree_min|duree }}</div></div>
+              <div><div class="kpi-libelle">Coût actuel</div><div class="chrono">{{ location.montant|euros }}</div></div>
+              <div><div class="kpi-libelle">Départ</div><div style="font-weight: 600; margin-top: 8px">{{ location.date_heure_depart|date_fr }}</div></div>
+            </div>
+          </div>
+          <form class="carte-pied" method="post" action="/espace/locations/{{ location.id_location }}/restituer">
+            {{ ui.csrf() }}
+            <div class="ligne">
+              <label class="sr-only" for="station">Station d'arrivée</label>
+              <select class="champ" id="station" name="station" required style="flex: 1 1 260px">
+                <option value="">Station d'arrivée…</option>
+                {% for st in stations_arrivee %}
+                  <option value="{{ st.id_station }}">{{ st.nom }} — {{ st.bornes_libres }} borne{{ st.bornes_libres > 1 ? 's' }} libre{{ st.bornes_libres > 1 ? 's' }}</option>
+                {% endfor %}
+              </select>
+              <label class="case"><input type="checkbox" name="casque" value="1"> Casque loué</label>
+              <button class="btn" type="submit">{{ icone('ok', 16) }} Restituer le vélo</button>
+            </div>
+          </form>
+        </div>
+      {% elseif abonnement %}
+        {# ------------------------------------------------ emprunt #}
+        <div class="carte">
+          <div class="carte-entete">
+            <span class="kpi-icone ton-primary">{{ icone('velo', 20) }}</span>
+            <div><h2>Emprunter un vélo</h2><p>Choisissez une station, puis un vélo disponible.</p></div>
+          </div>
+          <div class="carte-corps pile">
+            <form method="get" action="/espace" class="ligne">
+              <label class="sr-only" for="station-depart">Station</label>
+              <select class="champ" id="station-depart" name="station" data-auto style="flex: 1">
+                <option value="">Choisir une station de départ…</option>
+                {% for st in stations_depart %}
+                  <option value="{{ st.id_station }}" {{ st.id_station == station_choisie ? 'selected' }}>
+                    {{ st.nom }} — {{ st.mecaniques }} mécanique{{ st.mecaniques > 1 ? 's' }}, {{ st.electriques }} électrique{{ st.electriques > 1 ? 's' }}
+                  </option>
+                {% endfor %}
+              </select>
+              <noscript><button class="btn btn-secondaire" type="submit">Afficher</button></noscript>
+            </form>
+            {% if station_choisie %}
+              {% if velos is empty %}
+                {{ ui.vide('velo', 'Aucun vélo empruntable', 'Choisissez une autre station.') }}
+              {% else %}
+                <div class="velo-liste">
+                  {% for v in velos %}
+                    <div class="velo-carte">
+                      <span class="velo-pastille ton-{{ v.type_velo == 'ELECTRIQUE' ? 'accent' : 'primary' }}">
+                        {{ icone(v.type_velo == 'ELECTRIQUE' ? 'eclair' : 'velo', 18) }}</span>
+                      <div>
+                        <strong>Vélo n° {{ v.id_velo }}</strong>
+                        <small>Borne {{ v.numero_borne }}{% if v.niveau_batterie is not null %} · {{ v.niveau_batterie }} %{% endif %}</small>
+                      </div>
+                      <form method="post" action="/espace/emprunter">
+                        {{ ui.csrf() }}<input type="hidden" name="velo" value="{{ v.id_velo }}">
+                        <button class="btn btn-petit" type="submit">Emprunter</button>
+                      </form>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      {% else %}
+        <div class="carte">
+          {{ ui.vide('ticket', 'Aucun abonnement en cours', 'Un abonnement valide est nécessaire pour emprunter un vélo.') }}
+          <div class="carte-pied ligne"><a class="btn fin" href="/espace/abonnements">Choisir une formule {{ icone('fleche', 16) }}</a></div>
+        </div>
+      {% endif %}
+
+      {# ------------------------------------------------ derniers trajets #}
+      <div class="carte">
+        <div class="carte-entete"><h2>Derniers trajets</h2>
+          <div class="actions"><a href="/espace/locations">Tout l'historique {{ icone('fleche', 14) }}</a></div></div>
+        {% if dernieres is empty %}
+          {{ ui.vide('horloge', 'Aucun trajet pour l\'instant') }}
+        {% else %}
+          <div class="table-conteneur">
+            <table class="table">
+              <thead><tr><th>Date</th><th>Trajet</th><th class="num">Durée</th><th class="num">Montant</th></tr></thead>
+              <tbody>
+              {% for l in dernieres %}
+                <tr>
+                  <td>{{ l.date_heure_depart|date_fr }}</td>
+                  <td><div class="etapes">{{ l.station_depart }} <span class="fleche">{{ icone('fleche', 14) }}</span> {{ l.station_arrivee ?? '…' }}</div></td>
+                  <td class="num">{{ l.duree_min|duree }}</td>
+                  <td class="num">{{ l.statut == 'EN_COURS' ? ui.badge('EN_COURS') : l.montant|euros }}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="pile">
+      <div class="carte">
+        <div class="carte-entete"><h2>Mon abonnement</h2></div>
+        {% if abonnement %}
+          <div class="carte-corps">
+            <div class="ligne entre"><strong style="font-size: 18px">{{ abonnement.formule|libelle }}</strong>{{ ui.badge(abonnement.statut) }}</div>
+            <dl class="liste-def" style="margin-top: 14px">
+              <dt>Valable du</dt><dd>{{ abonnement.date_debut|jour }}</dd>
+              <dt>Jusqu'au</dt><dd>{{ abonnement.date_fin|jour }}</dd>
+              <dt>Jours restants</dt><dd>{{ abonnement.jours_restants }}</dd>
+              <dt>Minutes offertes</dt><dd>{{ abonnement.duree_gratuite_min }} min par trajet</dd>
+              <dt>Au-delà</dt><dd>{{ abonnement.prix_tranche|euros }} par {{ abonnement.duree_tranche_min }} min</dd>
+            </dl>
+          </div>
+        {% else %}
+          {{ ui.vide('ticket', 'Pas d\'abonnement actif') }}
+        {% endif %}
+        <div class="carte-pied"><a href="/espace/abonnements">Gérer mes abonnements {{ icone('fleche', 14) }}</a></div>
+      </div>
+
+      <div class="carte">
+        <div class="carte-entete"><h2>Mon bilan</h2></div>
+        <div class="carte-corps">
+          <dl class="liste-def">
+            <dt>Trajets effectués</dt><dd>{{ bilan.nb|nombre }}</dd>
+            <dt>Temps en selle</dt><dd>{{ bilan.minutes|duree }}</dd>
+            <dt>Dépenses de trajets</dt><dd>{{ bilan.depense|euros }}</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

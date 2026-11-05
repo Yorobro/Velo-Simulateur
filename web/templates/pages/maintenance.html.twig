@@ -1,0 +1,204 @@
+{% extends 'layout/base.html.twig' %}
+{% import 'components/ui.html.twig' as ui %}
+
+{% block titre %}Maintenance{% endblock %}
+{% block sous_titre %}<div class="sous-titre">Vélos à retirer, atelier, travaux sur les stations</div>{% endblock %}
+
+{% block contenu %}
+{% set c = compteurs %}
+<div class="pile">
+  <div class="grille g-4">
+    {{ ui.kpi('drapeau', 'Signalements ouverts', c.signalements_ouverts, null, 'danger') }}
+    {{ ui.kpi('velo', 'Vélos à retirer', a_retirer|length, c.bloques ~ ' bloqués sur leur borne', 'warning') }}
+    {{ ui.kpi('cle', 'À l\'atelier', c.en_atelier, c.reformes ~ ' vélos réformés au total', 'primary') }}
+    {{ ui.kpi('station', 'Travaux de station', c.travaux, signalements_station|length ~ ' signalements à traiter', 'accent') }}
+  </div>
+
+  <div class="onglets" role="tablist">
+    <a href="/maintenance?onglet=velos" class="{{ onglet == 'velos' ? 'actif' }}">Vélos <span class="compteur">{{ a_retirer|length + atelier|length }}</span></a>
+    <a href="/maintenance?onglet=stations" class="{{ onglet == 'stations' ? 'actif' }}">Stations <span class="compteur">{{ signalements_station|length + travaux|length }}</span></a>
+    <a href="/maintenance?onglet=signalements" class="{{ onglet == 'signalements' ? 'actif' }}">Tous les signalements</a>
+  </div>
+
+  {% if onglet == 'velos' %}
+    <div class="carte">
+      <div class="carte-entete"><div><h2>Vélos à retirer</h2><p>Vélos sur borne déclarés défectueux ou signalés par les usagers</p></div></div>
+      {% if a_retirer is empty %}
+        {{ ui.vide('ok', 'Aucun vélo à retirer') }}
+      {% else %}
+        <div class="table-conteneur">
+          <table class="table">
+            <thead><tr><th>Vélo</th><th>Emplacement</th><th>État</th><th>Signalement</th><th class="actions">Retrait</th></tr></thead>
+            <tbody>
+            {% for v in a_retirer %}
+              <tr>
+                <td><span class="titre-cellule">n° {{ v.id_velo }}</span> {{ ui.type_velo(v.type_velo) }}</td>
+                <td><a href="/stations/{{ v.id_station }}">{{ v.station }}</a><span class="sous">borne {{ v.numero_borne }}</span></td>
+                <td>{{ ui.badge(v.etat) }}</td>
+                <td>{% if v.nb_signalements %}{{ v.description }}<span class="sous">{{ v.nb_signalements }} signalement{{ v.nb_signalements > 1 ? 's' }} depuis le {{ v.depuis|date_fr }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+                <td class="actions">
+                  <form class="en-ligne" method="post" action="/maintenance/retraits">
+                    {{ ui.csrf() }}<input type="hidden" name="velo" value="{{ v.id_velo }}">
+                    <input class="champ champ-petit" name="description" required minlength="3" maxlength="500" style="width: 220px"
+                           value="{{ v.description ? 'Réparation : ' ~ v.description : 'Contrôle et réparation' }}" aria-label="Intervention prévue">
+                    <button class="btn btn-petit" type="submit">Retirer</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="carte">
+      <div class="carte-entete"><div><h2>À l'atelier</h2><p>Remise en circulation sur une borne libre, ou réforme</p></div></div>
+      {% if atelier is empty %}
+        {{ ui.vide('cle', 'Atelier vide') }}
+      {% else %}
+        <div class="table-conteneur">
+          <table class="table">
+            <thead><tr><th>Vélo</th><th>Intervention</th><th>Depuis</th><th class="actions">Sortie d'atelier</th></tr></thead>
+            <tbody>
+            {% for i in atelier %}
+              <tr>
+                <td><span class="titre-cellule">n° {{ i.id_velo }}</span> {{ ui.type_velo(i.type_velo) }}</td>
+                <td>{{ i.description }}<span class="sous">{{ i.operateur }} · {{ i.nb_signalements }} signalement{{ i.nb_signalements > 1 ? 's' }} traité{{ i.nb_signalements > 1 ? 's' }}</span></td>
+                <td>{{ i.date_heure_depart|date_fr }}<span class="sous">retiré à {{ i.station_depart }}</span></td>
+                <td class="actions">
+                  <form class="en-ligne" method="post" action="/maintenance/interventions/{{ i.id_intervention }}/remettre">
+                    {{ ui.csrf() }}
+                    <select class="champ champ-petit" name="station" required aria-label="Station" style="width: 190px">
+                      <option value="">Remettre à…</option>
+                      {% for st in stations_depot %}<option value="{{ st.id_station }}">{{ st.nom }} ({{ st.bornes_libres }})</option>{% endfor %}
+                    </select>
+                    <button class="btn btn-petit" type="submit">Remettre</button>
+                  </form>
+                  <form class="en-ligne" method="post" action="/maintenance/interventions/{{ i.id_intervention }}/reformer"
+                        data-confirmer="Réformer définitivement le vélo n° {{ i.id_velo }} ?">
+                    {{ ui.csrf() }}<button class="btn btn-fantome btn-petit" type="submit">Réformer</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </div>
+
+  {% elseif onglet == 'stations' %}
+    <div class="carte">
+      <div class="carte-entete"><div><h2>Signalements de station à traiter</h2><p>Sans intervention en cours</p></div></div>
+      {% if signalements_station is empty %}
+        {{ ui.vide('ok', 'Aucun signalement de station à traiter') }}
+      {% else %}
+        <div class="table-conteneur">
+          <table class="table">
+            <thead><tr><th>Station</th><th>Signalement</th><th class="actions">Traitement</th></tr></thead>
+            <tbody>
+            {% for s in signalements_station %}
+              <tr>
+                <td><a class="lien-ligne" href="/stations/{{ s.id_station }}"><span class="titre-cellule">{{ s.station }}</span></a>
+                  {% if s.etat_station != 'EN_SERVICE' %}{{ ui.badge(s.etat_station) }}{% endif %}</td>
+                <td>{{ s.description }}<span class="sous">{{ s.auteur }} · {{ s.date_heure_signalement|date_fr }}</span></td>
+                <td class="actions">
+                  <form class="en-ligne" method="post" action="/maintenance/travaux">
+                    {{ ui.csrf() }}<input type="hidden" name="signalement" value="{{ s.id_signalement }}">
+                    <input class="champ champ-petit" name="description" required minlength="3" maxlength="500" style="width: 200px"
+                           placeholder="Intervention prévue" aria-label="Intervention prévue">
+                    <button class="btn btn-petit" type="submit">Intervenir</button>
+                  </form>
+                  <form class="en-ligne" method="post" action="/maintenance/signalements/{{ s.id_signalement }}/cloturer"
+                        data-confirmer="Clore ce signalement sans intervention ?">
+                    {{ ui.csrf() }}<button class="btn btn-fantome btn-petit" type="submit">Clore</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="carte">
+      <div class="carte-entete"><h2>Travaux en cours</h2></div>
+      {% if travaux is empty %}
+        {{ ui.vide('station', 'Aucun travail en cours') }}
+      {% else %}
+        <div class="table-conteneur">
+          <table class="table">
+            <thead><tr><th>Station</th><th>Intervention</th><th>Depuis</th><th class="actions">Fin des travaux</th></tr></thead>
+            <tbody>
+            {% for t in travaux %}
+              <tr>
+                <td><span class="titre-cellule">{{ t.station }}</span>{% if t.etat_station != 'EN_SERVICE' %} {{ ui.badge(t.etat_station) }}{% endif %}</td>
+                <td>{{ t.description }}<span class="sous">{{ t.signalement }} · {{ t.operateur }}</span></td>
+                <td>{{ t.date_heure_debut|date_fr }}</td>
+                <td class="actions">
+                  <form class="en-ligne" method="post" action="/maintenance/travaux/{{ t.id_intervention }}/terminer">
+                    {{ ui.csrf() }}<input type="hidden" name="resolu" value="1">
+                    <button class="btn btn-petit" type="submit">{{ icone('ok', 14) }} Résolu</button>
+                  </form>
+                  <form class="en-ligne" method="post" action="/maintenance/travaux/{{ t.id_intervention }}/terminer">
+                    {{ ui.csrf() }}<input type="hidden" name="resolu" value="0">
+                    <button class="btn btn-secondaire btn-petit" type="submit">Non résolu</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </div>
+
+  {% else %}
+    <div class="carte">
+      <div class="carte-entete">
+        <form class="barre-outils" method="get" action="/maintenance">
+          <input type="hidden" name="onglet" value="signalements">
+          <select class="champ" name="statut" data-auto aria-label="Statut">
+            <option value="">Tous les statuts</option>
+            {% for s in ['OUVERT', 'EN_TRAITEMENT', 'CLOS'] %}<option value="{{ s }}" {{ s == statut ? 'selected' }}>{{ s|libelle }}</option>{% endfor %}
+          </select>
+          <select class="champ" name="cible" data-auto aria-label="Cible">
+            <option value="">Vélos et stations</option>
+            {% for s in ['VELO', 'STATION'] %}<option value="{{ s }}" {{ s == cible ? 'selected' }}>{{ s|libelle }}s</option>{% endfor %}
+          </select>
+          <noscript><button class="btn btn-secondaire" type="submit">Filtrer</button></noscript>
+        </form>
+      </div>
+      {% if page.elements is empty %}
+        {{ ui.vide('drapeau', 'Aucun signalement') }}
+      {% else %}
+        <div class="table-conteneur">
+          <table class="table">
+            <thead><tr><th>Date</th><th>Cible</th><th>Description</th><th>Auteur</th><th>Statut</th><th></th></tr></thead>
+            <tbody>
+            {% for s in page.elements %}
+              <tr>
+                <td>{{ s.date_heure_signalement|date_fr }}</td>
+                <td>{% if s.cible == 'VELO' %}Vélo n° {{ s.id_velo }}{% else %}<a href="/stations/{{ s.id_station }}">{{ s.station }}</a>{% endif %}</td>
+                <td>{{ s.description }}</td>
+                <td>{{ s.auteur }}</td>
+                <td>{{ ui.badge(s.statut) }}</td>
+                <td class="actions">
+                  {% if s.statut == 'OUVERT' %}
+                    <form method="post" action="/maintenance/signalements/{{ s.id_signalement }}/cloturer" data-confirmer="Clore ce signalement ?">
+                      {{ ui.csrf() }}<button class="btn btn-fantome btn-petit" type="submit">Clore</button></form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {{ ui.pagination(page) }}
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

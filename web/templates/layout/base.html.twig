@@ -1,0 +1,63 @@
+{% import 'components/ui.html.twig' as ui %}
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titre %}{% endblock %} · {{ app_nom }}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230f766e'/%3E%3Ccircle cx='7' cy='15' r='3' fill='none' stroke='white' stroke-width='1.8'/%3E%3Ccircle cx='17' cy='15' r='3' fill='none' stroke='white' stroke-width='1.8'/%3E%3Cpath d='M7 15l3-6h5l2 6M10 9l2 6' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/assets/css/app.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="barre-laterale">
+    <a class="brand" href="/">
+      <span class="brand-logo">{{ icone('velo', 20) }}</span>
+      <span><strong>{{ app_nom }}</strong><small>Réseau de l'agglomération</small></span>
+    </a>
+    <nav aria-label="Navigation principale">
+      {% for section in menu %}
+        <div class="nav-section">
+          <div class="nav-title">{{ section.titre }}</div>
+          {% for entree in section.entrees %}
+            <a class="nav-link{{ actif(entree.url) ? ' actif' }}" href="{{ entree.url }}">
+              {{ icone(entree.icone) }}<span>{{ entree.libelle }}</span>
+            </a>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </nav>
+    {% if utilisateur %}
+      <div class="sidebar-pied">
+        <div class="profil">
+          <span class="avatar">{{ utilisateur.prenom|first|upper }}{{ utilisateur.nom|first|upper }}</span>
+          <div><strong>{{ utilisateur.nomComplet }}</strong><span>{{ utilisateur.role.libelle }}</span></div>
+        </div>
+        <form method="post" action="/deconnexion">
+          {{ ui.csrf() }}
+          <button class="nav-link" type="submit">{{ icone('sortie') }}<span>Se déconnecter</span></button>
+        </form>
+      </div>
+    {% endif %}
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-toggle" type="button" data-menu aria-label="Menu">{{ icone('menu', 20) }}</button>
+      <div>
+        <h1>{{ block('titre') }}</h1>
+        {% block sous_titre %}{% endblock %}
+      </div>
+      <div class="topbar-actions">{% block actions %}{% endblock %}</div>
+    </header>
+    <main class="contenu">
+      {{ ui.flashes() }}
+      {% block contenu %}{% endblock %}
+    </main>
+  </div>
+</div>
+{# Scripts propres à la page (Chart.js…) avant app.js, qui s'en sert. #}
+{% block scripts %}{% endblock %}
+<script src="/assets/js/app.js" defer></script>
+</body>
+</html>

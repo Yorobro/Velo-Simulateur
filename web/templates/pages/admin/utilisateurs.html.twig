@@ -1,0 +1,71 @@
+{% extends 'layout/base.html.twig' %}
+{% import 'components/ui.html.twig' as ui %}
+
+{% block titre %}Utilisateurs{% endblock %}
+{% block sous_titre %}<div class="sous-titre">{{ compte|reduce((c, n) => c + n, 0)|nombre }} comptes</div>{% endblock %}
+
+{% block contenu %}
+<div class="pile">
+  <div class="ligne">
+    {% for r in roles %}
+      <a class="puce" href="/admin/utilisateurs?role={{ r }}">{{ r|libelle }} <strong>{{ (compte[r] ?? 0)|nombre }}</strong></a>
+    {% endfor %}
+  </div>
+
+  <div class="carte">
+    <div class="carte-entete">
+      <form class="barre-outils" method="get" action="/admin/utilisateurs" style="width: 100%">
+        <div class="recherche">
+          {{ icone('loupe', 16) }}
+          <input class="champ" name="q" value="{{ recherche }}" placeholder="Nom, prénom ou e-mail" aria-label="Rechercher">
+        </div>
+        <select class="champ" name="role" data-auto aria-label="Rôle">
+          <option value="">Tous les rôles</option>
+          {% for r in roles %}<option value="{{ r }}" {{ r == role ? 'selected' }}>{{ r|libelle }}</option>{% endfor %}
+        </select>
+        <button class="btn btn-secondaire" type="submit">Rechercher</button>
+        {% if recherche or role %}<a class="btn btn-fantome" href="/admin/utilisateurs">Effacer</a>{% endif %}
+      </form>
+    </div>
+    {% if page.elements is empty %}
+      {{ ui.vide('utilisateurs', 'Aucun utilisateur trouvé') }}
+    {% else %}
+      <div class="table-conteneur">
+        <table class="table">
+          <thead><tr><th>Utilisateur</th><th>Téléphone</th><th>Inscription</th><th>Rôle</th><th></th></tr></thead>
+          <tbody>
+          {% for u in page.elements %}
+            {% set soi = u.id_utilisateur == utilisateur.id %}
+            <tr>
+              <td><span class="titre-cellule">{{ u.prenom }} {{ u.nom }}</span><span class="sous">{{ u.email }}</span></td>
+              <td class="mono">{{ u.telephone }}</td>
+              <td>{{ u.date_inscription|jour }}</td>
+              <td>
+                {% if soi %}{{ ui.badge(u.role) }} <small>(vous)</small>
+                {% else %}
+                  <form class="en-ligne" method="post" action="/admin/utilisateurs/{{ u.id_utilisateur }}/role">
+                    {{ ui.csrf() }}
+                    <select class="champ champ-petit" name="role" aria-label="Rôle" data-auto>
+                      {% for r in roles %}<option value="{{ r }}" {{ r == u.role ? 'selected' }}>{{ r|libelle }}</option>{% endfor %}
+                    </select>
+                  </form>
+                {% endif %}
+              </td>
+              <td class="actions">
+                {% if not soi %}
+                  <form method="post" action="/admin/utilisateurs/{{ u.id_utilisateur }}/supprimer"
+                        data-confirmer="Supprimer le compte de {{ u.prenom }} {{ u.nom }} ?">
+                    {{ ui.csrf() }}<button class="btn btn-fantome btn-petit" type="submit" aria-label="Supprimer">{{ icone('corbeille', 16) }}</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {{ ui.pagination(page) }}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{# Composants d'interface réutilisables. #}
+
+{% macro csrf() %}<input type="hidden" name="_csrf" value="{{ csrf_jeton }}">{% endmacro %}
+
+{% macro badge(code, texte = null) %}
+  <span class="badge badge-{{ code|ton }}">{{ texte ?? code|libelle }}</span>
+{% endmacro %}
+
+{% macro kpi(icone_nom, libelle, valeur, detail = null, ton = 'primary') %}
+  <div class="carte kpi">
+    <span class="kpi-icone ton-{{ ton }}">{{ icone(icone_nom, 20) }}</span>
+    <div>
+      <div class="kpi-libelle">{{ libelle }}</div>
+      <div class="kpi-valeur">{{ valeur }}</div>
+      {% if detail %}<div class="kpi-detail">{{ detail }}</div>{% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
+{% macro vide(icone_nom, titre, texte = null) %}
+  <div class="vide">
+    <div class="vide-icone">{{ icone(icone_nom, 22) }}</div>
+    <h3>{{ titre }}</h3>
+    {% if texte %}<p>{{ texte }}</p>{% endif %}
+  </div>
+{% endmacro %}
+
+{% macro jauge(pct) %}
+  {% set pct = pct is null ? 0 : pct %}
+  <div class="jauge">
+    <div class="jauge-piste"><div class="jauge-barre{{ pct < 20 ? ' bas' : (pct >= 80 ? ' haut' : '') }}" style="width: {{ min(100, max(0, pct)) }}%"></div></div>
+    <span>{{ pct|nombre(0) }} %</span>
+  </div>
+{% endmacro %}
+
+{% macro type_velo(type) %}
+  {% if type == 'ELECTRIQUE' %}
+    <span class="badge badge-accent sans-point">{{ icone('eclair', 12) }} Électrique</span>
+  {% else %}
+    <span class="badge badge-primary">Mécanique</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro pagination(page) %}
+  {% if page.nbPages > 1 %}
+    {% set n = page.nbPages %}
+    {% set courante = page.numero %}
+    <div class="pagination">
+      <span>{{ page.total|nombre }} résultat{{ page.total > 1 ? 's' }} · page {{ courante }} sur {{ n }}</span>
+      <div class="pages">
+        {% if courante > 1 %}<a href="{{ chemin }}?{{ query|merge({page: courante - 1})|url_encode }}" aria-label="Page précédente">‹</a>{% endif %}
+        {% for p in max(1, courante - 2)..min(n, courante + 2) %}
+          {% if p == courante %}<span class="courante">{{ p }}</span>
+          {% else %}<a href="{{ chemin }}?{{ query|merge({page: p})|url_encode }}">{{ p }}</a>{% endif %}
+        {% endfor %}
+        {% if courante < n %}<a href="{{ chemin }}?{{ query|merge({page: courante + 1})|url_encode }}" aria-label="Page suivante">›</a>{% endif %}
+      </div>
+    </div>
+  {% endif %}
+{% endmacro %}
+
+{% macro flashes() %}
+  {% if flashes is not empty %}
+    <div class="flashes" role="status">
+      {% for f in flashes %}
+        <div class="flash flash-{{ f.type }}">
+          {{ icone(f.type == 'succes' ? 'ok' : (f.type == 'erreur' ? 'alerte' : 'info'), 18) }}
+          <p>{{ f.message }}</p>
+          <button type="button" aria-label="Fermer">{{ icone('croix', 16) }}</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endmacro %}

@@ -1,0 +1,67 @@
+{% extends 'layout/base.html.twig' %}
+{% import 'components/ui.html.twig' as ui %}
+
+{% block titre %}Stations{% endblock %}
+{% block sous_titre %}<div class="sous-titre">Disponibilités en temps réel</div>{% endblock %}
+{% block actions %}
+  {% if utilisateur.role.value == 'ADMINISTRATEUR' %}
+    <a class="btn" href="/stations/nouvelle">{{ icone('plus', 16) }} Nouvelle station</a>
+  {% endif %}
+{% endblock %}
+
+{% block contenu %}
+<div class="pile">
+  <div class="grille g-4">
+    {{ ui.kpi('station', 'Stations', totaux.stations|nombre, recherche or etat ? 'selon le filtre' : 'dans le réseau') }}
+    {{ ui.kpi('velo', 'Vélos mécaniques disponibles', totaux.mecaniques|nombre, null, 'primary') }}
+    {{ ui.kpi('eclair', 'Vélos électriques disponibles', totaux.electriques|nombre, null, 'accent') }}
+    {{ ui.kpi('borne', 'Bornes libres', totaux.bornes_libres|nombre, null, 'success') }}
+  </div>
+
+  <div class="carte">
+    <div class="carte-entete">
+      <form class="barre-outils" method="get" action="/stations" style="width: 100%">
+        <div class="recherche">
+          {{ icone('loupe', 16) }}
+          <label class="sr-only" for="q">Rechercher</label>
+          <input class="champ" id="q" name="q" value="{{ recherche }}" placeholder="Nom, adresse ou code postal">
+        </div>
+        <label class="sr-only" for="etat">État</label>
+        <select class="champ" id="etat" name="etat" data-auto>
+          <option value="">Tous les états</option>
+          {% for e in etats %}<option value="{{ e }}" {{ e == etat ? 'selected' }}>{{ e|libelle }}</option>{% endfor %}
+        </select>
+        <button class="btn btn-secondaire" type="submit">Filtrer</button>
+        {% if recherche or etat %}<a class="btn btn-fantome" href="/stations">Effacer</a>{% endif %}
+      </form>
+    </div>
+
+    {% if stations is empty %}
+      {{ ui.vide('station', 'Aucune station', 'Aucune station ne correspond à votre recherche.') }}
+    {% else %}
+      <div class="table-conteneur">
+        <table class="table">
+          <thead>
+            <tr><th>Station</th><th>État</th><th class="num">Mécaniques</th><th class="num">Électriques</th>
+                <th class="num">Bornes libres</th><th>Remplissage</th><th></th></tr>
+          </thead>
+          <tbody>
+          {% for s in stations %}
+            <tr>
+              <td><a class="lien-ligne" href="/stations/{{ s.id_station }}">
+                <span class="titre-cellule">{{ s.nom }}</span><span class="sous">{{ s.adresse }}</span></a></td>
+              <td>{{ ui.badge(s.etat) }}</td>
+              <td class="num">{{ s.velos_mecaniques_disponibles }}</td>
+              <td class="num">{{ s.velos_electriques_disponibles }}</td>
+              <td class="num">{{ s.bornes_libres }} <small>/ {{ s.bornes_en_service }}</small></td>
+              <td>{% if s.etat == 'EN_SERVICE' %}{{ ui.jauge(s.taux_remplissage_pct) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td class="actions"><a class="btn btn-fantome btn-petit" href="/stations/{{ s.id_station }}" aria-label="Voir">{{ icone('fleche', 16) }}</a></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

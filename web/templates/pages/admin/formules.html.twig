@@ -1,0 +1,31 @@
+{% extends 'layout/base.html.twig' %}
+{% import 'components/ui.html.twig' as ui %}
+
+{% block titre %}Formules tarifaires{% endblock %}
+{% block sous_titre %}<div class="sous-titre">Prix et conditions ; les nouvelles valeurs s'appliquent aux prochaines souscriptions et aux prochains trajets.</div>{% endblock %}
+
+{% block contenu %}
+{% set champs = {
+  prix: ['Prix (€)', '0.01'], duree_validite_jours: ['Validité (jours)', '1'], duree_gratuite_min: ['Gratuit (min)', '1'],
+  duree_tranche_min: ['Tranche (min)', '1'], prix_tranche: ['Prix tranche (€)', '0.01'],
+  supplement_electrique: ['Suppl. électrique (€)', '0.01'], supplement_casque: ['Suppl. casque (€)', '0.01']} %}
+<div class="pile">
+  {% for f in formules %}
+    <form class="carte" method="post" action="/admin/formules/{{ f.id_formule }}">
+      {{ ui.csrf() }}
+      <div class="carte-entete"><span class="kpi-icone ton-primary">{{ icone('ticket', 20) }}</span><h2>{{ f.type|libelle }}</h2>
+        <div class="actions"><button class="btn btn-petit" type="submit">Enregistrer</button></div></div>
+      <div class="carte-corps">
+        <div class="grille" style="grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 14px">
+          {% for champ, def in champs %}
+            <div class="groupe">
+              <label for="{{ champ }}-{{ f.id_formule }}">{{ def[0] }}</label>
+              <input class="champ" id="{{ champ }}-{{ f.id_formule }}" name="{{ champ }}" type="number" min="0" step="{{ def[1] }}" required value="{{ f[champ] }}">
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </form>
+  {% endfor %}
+</div>
+{% endblock %}

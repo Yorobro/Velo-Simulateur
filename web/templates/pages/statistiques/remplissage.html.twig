@@ -1,0 +1,45 @@
+{% extends 'layout/base.html.twig' %}
+{% import 'components/ui.html.twig' as ui %}
+
+{% block titre %}Remplissage des stations{% endblock %}
+{% block sous_titre %}<div class="sous-titre"><a href="/statistiques">Statistiques</a> · taux moyen par heure sur les 30 derniers jours</div>{% endblock %}
+
+{% block contenu %}
+<div class="carte">
+  <div class="carte-entete">
+    <div class="legende">
+      <span><i style="background: var(--danger-soft)"></i>Vide (moins de 5 %)</span>
+      <span><i style="background: color-mix(in srgb, var(--primary) 20%, #f1f5f9)"></i>Peu rempli</span>
+      <span><i style="background: color-mix(in srgb, var(--primary) 70%, #f1f5f9)"></i>Bien rempli</span>
+      <span><i style="background: var(--warning-soft)"></i>Pleine (plus de 95 %)</span>
+    </div>
+  </div>
+  {% if stations is empty %}
+    {{ ui.vide('grille', 'Pas encore de données sur 30 jours') }}
+  {% else %}
+    <div class="carte-corps table-conteneur">
+      <table class="chaleur">
+        <thead>
+          <tr><th></th>{% for h in 0..23 %}<th>{{ h }}</th>{% endfor %}<th>Moy.</th></tr>
+        </thead>
+        <tbody>
+        {% for s in stations %}
+          <tr>
+            <th class="station"><a href="/stations/{{ s.id }}">{{ s.nom }}</a></th>
+            {% for taux in s.heures %}
+              {% if taux is null %}
+                <td class="na"></td>
+              {% else %}
+                <td class="{{ taux < 5 ? 'vide-station' : (taux > 95 ? 'pleine-station' : (taux > 55 ? 'fort')) }}"
+                    style="--t: {{ taux|round }}" title="{{ s.nom }}, {{ loop.index0 }} h : {{ taux|nombre(1) }} %">{{ taux|round }}</td>
+              {% endif %}
+            {% endfor %}
+            <td style="--t: {{ s.moyenne|round }}" class="{{ s.moyenne > 55 ? 'fort' }}"><strong>{{ s.moyenne|round }}</strong></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

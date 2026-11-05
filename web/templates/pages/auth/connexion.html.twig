@@ -1,0 +1,36 @@
+{% extends 'layout/auth.html.twig' %}
+{% import 'components/ui.html.twig' as ui %}
+
+{% block titre %}Connexion{% endblock %}
+
+{% block contenu %}
+  <h1>Connexion</h1>
+  <p>Accédez à votre espace avec votre adresse e-mail.</p>
+  <form method="post" action="/connexion">
+    {{ ui.csrf() }}
+    <div class="groupe">
+      <label for="email">Adresse e-mail</label>
+      <input class="champ" id="email" name="email" type="email" autocomplete="username" required autofocus
+             value="{{ saisie.email ?? '' }}" placeholder="prenom.nom@exemple.fr">
+    </div>
+    <div class="groupe">
+      <label for="mot_de_passe">Mot de passe</label>
+      <input class="champ" id="mot_de_passe" name="mot_de_passe" type="password" autocomplete="current-password" required>
+    </div>
+    <button class="btn btn-bloc" type="submit">Se connecter {{ icone('fleche', 16) }}</button>
+
+    <div class="demo">
+      <div class="demo-titre">Comptes de démonstration · mot de passe <code>velo2026</code></div>
+      <div class="demo-comptes">
+        {% for compte, libelle in {
+          'usager@velo.example.org': 'Usager',
+          'regulation@velo.example.org': 'Régulation',
+          'maintenance@velo.example.org': 'Maintenance',
+          'admin@velo.example.org': 'Administrateur'} %}
+          <button type="button" data-compte="{{ compte }}" data-mot-de-passe="velo2026">{{ libelle }}</button>
+        {% endfor %}
+      </div>
+    </div>
+  </form>
+  <p class="muted" style="margin-top: 20px">Pas encore de compte ? <a href="/inscription">Créer un compte usager</a></p>
+{% endblock %}

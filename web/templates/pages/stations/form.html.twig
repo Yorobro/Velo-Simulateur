@@ -1,0 +1,57 @@
+{% extends 'layout/base.html.twig' %}
+{% import 'components/ui.html.twig' as ui %}
+{% set creation = station is null %}
+{% set v = saisie is not empty ? saisie : (station ?? {}) %}
+
+{% block titre %}{{ creation ? 'Nouvelle station' : 'Modifier « ' ~ station.nom ~ ' »' }}{% endblock %}
+{% block sous_titre %}<div class="sous-titre"><a href="/stations">Stations</a>{{ creation ? '' : ' · ' ~ station.nom }}</div>{% endblock %}
+
+{% block contenu %}
+<div class="carte" style="max-width: 760px">
+  <div class="carte-entete"><div><h2>{{ creation ? 'Nouvelle station' : 'Informations de la station' }}</h2>
+    <p>{{ creation ? 'Les bornes sont créées en service, numérotées à partir de 1.' : 'L\'état s\'applique immédiatement aux emprunts et restitutions.' }}</p></div></div>
+  <form method="post" action="{{ creation ? '/stations' : '/stations/' ~ station.id_station }}">
+    {{ ui.csrf() }}
+    <div class="carte-corps">
+      <div class="form-grille">
+        <div class="groupe plein">
+          <label for="nom">Nom</label>
+          <input class="champ" id="nom" name="nom" required maxlength="100" value="{{ v.nom ?? '' }}">
+        </div>
+        <div class="groupe plein">
+          <label for="adresse">Adresse</label>
+          <input class="champ" id="adresse" name="adresse" required maxlength="255" value="{{ v.adresse ?? '' }}" placeholder="12 rue de la Gare, Belfort">
+        </div>
+        <div class="groupe">
+          <label for="code_postal">Code postal</label>
+          <input class="champ" id="code_postal" name="code_postal" required pattern="\d{5}" maxlength="5" value="{{ v.code_postal ?? '' }}">
+        </div>
+        <div class="groupe">
+          <label for="etat">État</label>
+          <select class="champ" id="etat" name="etat">
+            {% for e in etats %}<option value="{{ e }}" {{ (v.etat ?? 'EN_SERVICE') == e ? 'selected' }}>{{ e|libelle }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="groupe">
+          <label for="latitude">Latitude</label>
+          <input class="champ" id="latitude" name="latitude" required inputmode="decimal" value="{{ v.latitude ?? '' }}" placeholder="47.638000">
+        </div>
+        <div class="groupe">
+          <label for="longitude">Longitude</label>
+          <input class="champ" id="longitude" name="longitude" required inputmode="decimal" value="{{ v.longitude ?? '' }}" placeholder="6.863500">
+        </div>
+        {% if creation %}
+          <div class="groupe">
+            <label for="nb_bornes">Nombre de bornes</label>
+            <input class="champ" id="nb_bornes" name="nb_bornes" type="number" min="1" max="60" required value="{{ v.nb_bornes ?? 10 }}">
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="carte-pied ligne">
+      <a class="btn btn-fantome" href="{{ creation ? '/stations' : '/stations/' ~ station.id_station }}">Annuler</a>
+      <button class="btn fin" type="submit">{{ creation ? 'Créer la station' : 'Enregistrer' }}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

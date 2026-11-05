@@ -1,0 +1,49 @@
+{% extends 'layout/base.html.twig' %}
+{% import 'components/ui.html.twig' as ui %}
+
+{% block titre %}Factures{% endblock %}
+{% block sous_titre %}<div class="sous-titre">Souscriptions et trajets payants</div>{% endblock %}
+
+{% block contenu %}
+<div class="pile">
+  {% if impayees.nb > 0 %}
+    <div class="alerte alerte-attention">{{ icone('alerte') }}
+      <div><strong>{{ impayees.nb }} facture{{ impayees.nb > 1 ? 's' }} à régler</strong> — {{ impayees.montant|euros }} au total.</div></div>
+  {% else %}
+    <div class="alerte alerte-info">{{ icone('ok') }}<div>Toutes vos factures sont réglées.</div></div>
+  {% endif %}
+
+  <div class="carte">
+    {% if page.elements is empty %}
+      {{ ui.vide('facture', 'Aucune facture') }}
+    {% else %}
+      <div class="table-conteneur">
+        <table class="table">
+          <thead><tr><th>N°</th><th>Émise le</th><th>Objet</th><th class="num">Montant</th><th>Statut</th><th></th></tr></thead>
+          <tbody>
+          {% for f in page.elements %}
+            <tr>
+              <td class="mono">{{ f.id_facture }}</td>
+              <td>{{ f.date_emission|date_fr }}</td>
+              <td><span class="titre-cellule">{{ f.objet|libelle }}</span>
+                <span class="sous">{{ f.objet == 'ABONNEMENT' ? f.detail|libelle : f.detail }}</span></td>
+              <td class="num"><strong>{{ f.montant|euros }}</strong></td>
+              <td>{% if f.date_reglement %}{{ ui.badge('PAYEE') }} <small>le {{ f.date_reglement|jour }}</small>{% else %}{{ ui.badge('A_PAYER') }}{% endif %}</td>
+              <td class="actions">
+                {% if f.date_reglement is null %}
+                  <form method="post" action="/espace/factures/{{ f.id_facture }}/regler"
+                        data-confirmer="Régler la facture n° {{ f.id_facture }} ({{ f.montant|euros }}) ?">
+                    {{ ui.csrf() }}<button class="btn btn-petit" type="submit">{{ icone('euro', 14) }} Payer</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {{ ui.pagination(page) }}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

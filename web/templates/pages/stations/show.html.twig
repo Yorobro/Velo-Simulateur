@@ -1,0 +1,95 @@
+{% extends 'layout/base.html.twig' %}
+{% import 'components/ui.html.twig' as ui %}
+{% set s = station %}
+{% set admin = utilisateur.role.value == 'ADMINISTRATEUR' %}
+
+{% block titre %}{{ s.nom }}{% endblock %}
+{% block sous_titre %}<div class="sous-titre"><a href="/stations">Stations</a> · {{ s.adresse }}</div>{% endblock %}
+{% block actions %}
+  <a class="btn btn-secondaire" href="/signaler?station={{ s.id_station }}">{{ icone('drapeau', 16) }} Signaler un problème</a>
+  {% if admin %}
+    <a class="btn btn-secondaire" href="/stations/{{ s.id_station }}/modifier">{{ icone('crayon', 16) }} Modifier</a>
+    <form method="post" action="/stations/{{ s.id_station }}/supprimer" data-confirmer="Supprimer la station « {{ s.nom }} » et ses bornes ?">
+      {{ ui.csrf() }}<button class="btn btn-danger" type="submit">{{ icone('corbeille', 16) }} Supprimer</button>
+    </form>
+  {% endif %}
+{% endblock %}
+
+{% block contenu %}
+<div class="pile">
+  {% if s.etat != 'EN_SERVICE' %}
+    <div class="alerte alerte-attention">{{ icone('alerte') }}
+      <div><strong>Station {{ s.etat|libelle|lower }}.</strong> Aucun emprunt ni aucune restitution n'est possible pour le moment.</div></div>
+  {% endif %}
+
+  <div class="grille g-4">
+    {{ ui.kpi('velo', 'Mécaniques disponibles', s.velos_mecaniques_disponibles, null, 'primary') }}
+    {{ ui.kpi('eclair', 'Électriques disponibles', s.velos_electriques_disponibles, null, 'accent') }}
+    {{ ui.kpi('borne', 'Bornes libres', s.bornes_libres, 'sur ' ~ s.bornes_en_service ~ ' en service', 'success') }}
+    {{ ui.kpi('graphique', 'Remplissage', (s.taux_remplissage_pct ?? 0)|nombre ~ ' %', s.velos_presents ~ ' vélos présents', 'info') }}
+  </div>
+
+  <div class="grille g-principal">
+    <div class="carte">
+      <div class="carte-entete">
+        <div><h2>Bornes</h2><p>{{ s.nb_bornes }} bornes, {{ s.bornes_en_service }} en service</p></div>
+        {% if admin %}
+          <div class="actions">
+            <form method="post" action="/stations/{{ s.id_station }}/bornes">{{ ui.csrf() }}
+              <button class="btn btn-secondaire btn-petit" type="submit">{{ icone('plus', 14) }} Ajouter une borne</button></form>
+          </div>
+        {% endif %}
+      </div>
+      <div class="carte-corps">
+        <div class="bornes">
+          {% for b in bornes %}
+            <div class="borne{{ b.etat != 'EN_SERVICE' ? ' hors-service' : (b.id_velo is null ? ' libre') }}">
+              <div class="ligne entre">
+                <span class="borne-numero">Borne {{ b.numero }}</span>
+                {% if b.etat != 'EN_SERVICE' %}{{ ui.badge(b.etat) }}{% endif %}
+              </div>
+              {% if b.id_velo %}
+                <div class="borne-velo">Vélo n° {{ b.id_velo }}</div>
+                <div class="ligne" style="margin-top: 6px">
+                  {{ ui.type_velo(b.type_velo) }}
+                  {% if b.etat_velo != 'EN_SERVICE' %}{{ ui.badge(b.etat_velo) }}{% endif %}
+                </div>
+                {% if b.niveau_batterie is not null %}
+                  <div class="muted" style="margin-top: 6px">{{ icone('batterie', 14) }} {{ b.niveau_batterie }} %</div>
+                {% endif %}
+              {% else %}
+                <div class="borne-velo muted">{{ b.etat == 'EN_SERVICE' ? 'Libre' : 'Indisponible' }}</div>
+              {% endif %}
+              {% if admin %}
+                <form method="post" action="/stations/{{ s.id_station }}/bornes/{{ b.numero }}">
+                  {{ ui.csrf() }}
+                  <input type="hidden" name="etat" value="{{ b.etat == 'EN_SERVICE' ? 'HORS_SERVICE' : 'EN_SERVICE' }}">
+                  <button class="btn btn-fantome btn-petit" type="submit">
+                    {{ b.etat == 'EN_SERVICE' ? 'Mettre hors service' : 'Remettre en service' }}</button>
+                </form>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="carte">
+      <div class="carte-entete"><h2>Informations</h2></div>
+      <div class="carte-corps">
+        <dl class="liste-def">
+          <dt>État</dt><dd>{{ ui.badge(s.etat) }}</dd>
+          <dt>Adresse</dt><dd>{{ s.adresse }}</dd>
+          <dt>Code postal</dt><dd>{{ s.code_postal }}</dd>
+          <dt>Coordonnées</dt><dd class="mono">{{ s.latitude }}, {{ s.longitude }}</dd>
+          <dt>Bornes</dt><dd>{{ s.nb_bornes }}</dd>
+        </dl>
+      </div>
+      <div class="carte-pied">
+        <a href="https://www.openstreetmap.org/?mlat={{ s.latitude }}&amp;mlon={{ s.longitude }}#map=17/{{ s.latitude }}/{{ s.longitude }}"
+           target="_blank" rel="noopener">{{ icone('carte', 14) }} Voir sur OpenStreetMap</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

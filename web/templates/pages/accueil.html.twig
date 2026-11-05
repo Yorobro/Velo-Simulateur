@@ -1,0 +1,81 @@
+{% extends 'layout/base.html.twig' %}
+{% import 'components/ui.html.twig' as ui %}
+
+{% block titre %}Tableau de bord{% endblock %}
+{% block sous_titre %}<div class="sous-titre">Bonjour {{ utilisateur.prenom }}, voici l'état du réseau en ce moment.</div>{% endblock %}
+
+{% block contenu %}
+{% set i = indicateurs %}
+<div class="pile">
+  <div class="grille g-4">
+    {{ ui.kpi('velo', 'Trajets aujourd\'hui', i.trajets_jour|nombre, i.trajets_30j|nombre ~ ' sur 30 jours') }}
+    {{ ui.kpi('chrono', 'Locations en cours', i.locations_en_cours|nombre, 'vélos actuellement empruntés', 'info') }}
+    {{ ui.kpi('station', 'Vélos disponibles', i.velos_disponibles|nombre, i.bornes_libres|nombre ~ ' bornes libres', 'success') }}
+    {{ ui.kpi('euro', 'Recettes (30 jours)', i.recettes_30j|euros, i.abonnes_actifs|nombre ~ ' abonnés actifs', 'accent') }}
+  </div>
+
+  <div class="grille g-principal">
+    <div class="carte">
+      <div class="carte-entete">
+        <div><h2>Stations à surveiller</h2><p>Vides, pleines ou déséquilibrées</p></div>
+        <div class="actions">
+          {% for statut in ['VIDE', 'PLEINE', 'PRESQUE_VIDE', 'PRESQUE_PLEINE'] %}
+            {% if compte_stations[statut] ?? 0 %}{{ ui.badge(statut, (compte_stations[statut]) ~ ' ' ~ statut|libelle|lower) }}{% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      {% if a_reguler is empty %}
+        {{ ui.vide('ok', 'Réseau équilibré', 'Aucune station ne demande d\'intervention.') }}
+      {% else %}
+        <div class="table-conteneur">
+          <table class="table">
+            <thead><tr><th>Station</th><th>Statut</th><th class="num">Vélos dispo.</th><th class="num">Bornes libres</th><th>Remplissage</th></tr></thead>
+            <tbody>
+            {% for s in a_reguler %}
+              <tr>
+                <td><a class="lien-ligne" href="/stations/{{ s.id_station }}"><span class="titre-cellule">{{ s.nom }}</span></a></td>
+                <td>{{ ui.badge(s.statut) }}</td>
+                <td class="num">{{ s.velos_disponibles }}</td>
+                <td class="num">{{ s.bornes_libres }}</td>
+                <td>{{ ui.jauge(s.taux_remplissage_pct) }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+      {% if utilisateur.role.autorise(['OPERATEUR_REGULATION']) %}
+        <div class="carte-pied"><a href="/regulation">Ouvrir la régulation {{ icone('fleche', 14) }}</a></div>
+      {% endif %}
+    </div>
+
+    <div class="pile">
+      <div class="carte">
+        <div class="carte-entete"><h2>Réseau</h2></div>
+        <div class="carte-corps">
+          <dl class="liste-def">
+            <dt>Stations en service</dt><dd>{{ i.stations_en_service }} sur {{ i.stations }}</dd>
+            <dt>Indisponibilité de la flotte</dt><dd>{{ i.indisponibilite_pct|nombre(1) }} %</dd>
+            <dt>Abonnés actifs</dt><dd>{{ i.abonnes_actifs|nombre }}</dd>
+            <dt>Bornes libres</dt><dd>{{ i.bornes_libres|nombre }}</dd>
+          </dl>
+        </div>
+      </div>
+      <div class="carte">
+        <div class="carte-entete"><h2>Maintenance</h2></div>
+        <div class="carte-corps">
+          <dl class="liste-def">
+            <dt>Signalements ouverts</dt><dd>{{ maintenance.signalements_ouverts }}</dd>
+            <dt>Vélos à l'atelier</dt><dd>{{ maintenance.en_atelier }}</dd>
+            <dt>Vélos bloqués sur borne</dt><dd>{{ maintenance.bloques }}</dd>
+            <dt>Travaux de station en cours</dt><dd>{{ maintenance.travaux }}</dd>
+          </dl>
+        </div>
+        {% if utilisateur.role.autorise(['OPERATEUR_MAINTENANCE']) %}
+          <div class="carte-pied"><a href="/maintenance">Ouvrir la maintenance {{ icone('fleche', 14) }}</a></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

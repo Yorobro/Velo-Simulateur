@@ -1,0 +1,56 @@
+{% extends 'layout/base.html.twig' %}
+{% import 'components/ui.html.twig' as ui %}
+
+{% block titre %}Signaler un problème{% endblock %}
+{% block sous_titre %}<div class="sous-titre">Votre signalement est transmis directement à l'équipe de maintenance.</div>{% endblock %}
+
+{% block contenu %}
+<div class="grille g-2">
+  <form class="carte" method="post" action="/signaler/velo">
+    {{ ui.csrf() }}
+    <div class="carte-entete">
+      <span class="kpi-icone ton-primary">{{ icone('velo', 20) }}</span>
+      <div><h2>Un problème sur un vélo</h2><p>Freins, pneus, chaîne, éclairage, batterie…</p></div>
+    </div>
+    <div class="carte-corps pile">
+      <div class="groupe">
+        <label for="velo">Numéro du vélo</label>
+        <input class="champ" id="velo" name="velo" type="number" min="1" required
+               value="{{ saisie.velo ?? velo_choisi ?? dernier_velo ?? '' }}">
+        {% if dernier_velo %}<div class="aide">Pré-rempli avec le dernier vélo que vous avez emprunté (n° {{ dernier_velo }}).</div>{% endif %}
+      </div>
+      <div class="groupe">
+        <label for="description-velo">Description</label>
+        <textarea class="champ" id="description-velo" name="description" required minlength="5" maxlength="500"
+                  placeholder="Ex. : le frein arrière ne freine presque plus.">{{ saisie.velo is defined ? saisie.description : '' }}</textarea>
+      </div>
+    </div>
+    <div class="carte-pied ligne"><button class="btn fin" type="submit">{{ icone('drapeau', 16) }} Envoyer le signalement</button></div>
+  </form>
+
+  <form class="carte" method="post" action="/signaler/station">
+    {{ ui.csrf() }}
+    <div class="carte-entete">
+      <span class="kpi-icone ton-accent">{{ icone('station', 20) }}</span>
+      <div><h2>Un problème sur une station</h2><p>Borne bloquée, écran éteint, paiement, dégradation…</p></div>
+    </div>
+    <div class="carte-corps pile">
+      <div class="groupe">
+        <label for="station">Station</label>
+        <select class="champ" id="station" name="station" required>
+          <option value="">Choisir une station…</option>
+          {% for s in stations %}
+            <option value="{{ s.id_station }}" {{ (saisie.station ?? station_choisie) == s.id_station ? 'selected' }}>{{ s.nom }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="groupe">
+        <label for="description-station">Description</label>
+        <textarea class="champ" id="description-station" name="description" required minlength="5" maxlength="500"
+                  placeholder="Ex. : la borne n° 3 ne libère pas le vélo.">{{ saisie.station is defined ? saisie.description : '' }}</textarea>
+      </div>
+    </div>
+    <div class="carte-pied ligne"><button class="btn fin" type="submit">{{ icone('drapeau', 16) }} Envoyer le signalement</button></div>
+  </form>
+</div>
+{% endblock %}

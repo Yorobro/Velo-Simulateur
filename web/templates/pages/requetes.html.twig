@@ -1,0 +1,91 @@
+{% extends 'layout/base.html.twig' %}
+{% import 'components/ui.html.twig' as ui %}
+
+{% block titre %}Requêtes{% endblock %}
+{% block sous_titre %}<div class="sous-titre">Requêtes principales et console de lecture, avec leur temps d'exécution</div>{% endblock %}
+{% block actions %}
+  <form method="post" action="/requetes/banc">
+    {{ ui.csrf() }}<button class="btn btn-accent" type="submit">{{ icone('chrono', 16) }} Mesurer toutes les requêtes</button>
+  </form>
+{% endblock %}
+
+{% block contenu %}
+<div class="grille g-principal" style="grid-template-columns: minmax(0, 0.9fr) minmax(0, 2fr)">
+  <div class="carte">
+    <div class="carte-entete"><div><h2>Catalogue</h2><p>Requêtes de l'application</p></div></div>
+    <div class="carte-corps catalogue">
+      {% for id, r in catalogue %}
+        <a href="/requetes?requete={{ id }}" class="{{ id == choisie ? 'actif' }}">
+          {{ icone('base', 16) }}<span><strong>{{ r.titre }}</strong><small>{{ r.description }}</small></span>{{ icone('lecture', 14) }}
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="pile">
+    {% if mesures %}
+      {% set plus_long = max(mesures|map(m => m.duree_ms ?? 0)|merge([1])) %}
+      <div class="carte">
+        <div class="carte-entete"><div><h2>Temps d'exécution</h2><p>Chaque requête du catalogue, exécutée une fois · total {{ total_ms|nombre(1) }} ms</p></div></div>
+        <div class="table-conteneur">
+          <table class="table table-compacte">
+            <thead><tr><th>Requête</th><th class="num">Lignes</th><th class="num">Durée</th><th style="width: 30%"></th></tr></thead>
+            <tbody>
+            {% for m in mesures %}
+              <tr>
+                <td><a href="/requetes?requete={{ m.id }}">{{ m.titre }}</a>{% if m.erreur %}<span class="sous" style="color: var(--danger)">{{ m.erreur }}</span>{% endif %}</td>
+                <td class="num">{{ m.lignes is null ? '—' : m.lignes|nombre }}</td>
+                <td class="num"><strong>{{ m.duree_ms is null ? '—' : m.duree_ms|nombre(2) ~ ' ms' }}</strong></td>
+                <td><div class="duree-barre" style="width: {{ ((m.duree_ms ?? 0) / plus_long * 100)|round(1) }}%"></div></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endif %}
+
+    <form class="carte" method="post" action="/requetes/console">
+      {{ ui.csrf() }}
+      <div class="carte-entete"><div><h2>Console SQL</h2><p>Une instruction de lecture : SELECT, WITH, EXPLAIN, SHOW, DESCRIBE. Exécutée en lecture seule, 15 s au plus.</p></div></div>
+      <div class="carte-corps">
+        <label class="sr-only" for="sql">Requête</label>
+        <textarea class="champ sql" id="sql" name="sql" spellcheck="false" placeholder="SELECT * FROM v_disponibilite_station">{{ saisie.sql ?? sql }}</textarea>
+      </div>
+      <div class="carte-pied ligne">
+        <button class="btn" type="submit" name="mode" value="executer">{{ icone('lecture', 14) }} Exécuter</button>
+        <button class="btn btn-secondaire" type="submit" name="mode" value="expliquer">{{ icone('loupe', 14) }} Plan d'exécution (EXPLAIN)</button>
+        <span class="muted fin">200 lignes affichées au plus</span>
+      </div>
+    </form>
+
+    {% if resultat %}
+      <div class="carte">
+        <div class="carte-entete">
+          <div><h2>Résultat</h2></div>
+          <div class="actions">
+            <span class="puce">{{ icone('chrono', 14) }} <strong>{{ resultat.dureeMs|nombre(2) }} ms</strong></span>
+            <span class="puce"><strong>{{ resultat.nbLignes|nombre }}</strong> ligne{{ resultat.nbLignes > 1 ? 's' }}</span>
+            {% if resultat.tronque %}<span class="badge badge-warning">200 premières affichées</span>{% endif %}
+          </div>
+        </div>
+        <div class="carte-corps"><pre class="bloc-code">{{ resultat.sql }}</pre></div>
+        {% if resultat.lignes is empty %}
+          {{ ui.vide('base', 'Aucune ligne') }}
+        {% else %}
+          <div class="table-conteneur" style="max-height: 520px">
+            <table class="table table-compacte">
+              <thead><tr>{% for c in resultat.colonnes %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+              <tbody>
+              {% for l in resultat.lignes %}
+                <tr>{% for c in resultat.colonnes %}<td class="mono">{{ l[c] is null ? 'NULL' : l[c] }}</td>{% endfor %}</tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
