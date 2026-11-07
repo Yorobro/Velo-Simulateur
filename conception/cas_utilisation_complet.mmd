@@ -1,0 +1,175 @@
+%% Diagramme de cas d'utilisation — Réseau de vélos en libre-service (V2 — version complète)
+%% Mermaid n'a pas de type « use case » natif : on utilise un flowchart.
+%%   - acteur          : rectangle 👤
+%%   - cas             : forme arrondie (ellipse approchée)
+%%   - association     : trait plein sans flèche   (---)
+%%   - «include»       : flèche pointillée du cas de base vers le cas inclus (toujours exécuté)
+%%   - «extend»        : flèche pointillée du cas facultatif vers le cas qu'il étend
+%%   - généralisation  : flèche pleine « hérite de » (enfant --> parent)
+
+%% Changements par rapport à la V1 :
+%%   - « Opérateur » séparé en « Opérateur de régulation » et « Opérateur de maintenance »
+%%   - « Consulter ses abonnements » (UC18) : l'expiration se déduit de date_fin, sans planificateur
+%%   - Changer l'état d'une station (UC29), Gérer les véhicules de régulation (UC45),
+%%     Générer un rapport (UC47)
+%%   - facturation unifiée : Souscrire, Renouveler et Restituer incluent Générer la facture,
+%%     qui est étendue par Payer si le montant de la facture est supérieur à 0
+%%   - un cas « Rechercher et filtrer » par acteur humain (UC19, UC30, UC35, UC46)
+%%   - UC31 : choix du véhicule au démarrage de la tournée
+
+%% Ajouts de la version complète par rapport à V2/cas_utilisation.mmd :
+%%   - statistiques détaillées : UC44 devient un cas parent, avec 4 cas enfants (généralisation)
+%%     reliés à l'acteur qui s'en sert (régulation : remplissage, maintenance : indisponibilité)
+%%   - régulation : « Proposer des déplacements » inclut « Identifier les stations pleines ou vides »
+
+flowchart LR
+  U["Usager"]
+  OPR["Opérateur de régulation"]
+  OPM["Opérateur de maintenance"]
+  A["Administrateur"]
+
+  subgraph SYS["Système de vélos en libre-service"]
+    %% --- Usager ---
+    UC1(["S'inscrire"])
+    UC2(["S'authentifier"])
+    UC3(["Voir en temps réel les vélos disponibles<br/>(par type)"])
+    UC4(["Voir les bornes libres"])
+    UC19(["Rechercher et filtrer les stations<br/>(type de vélo disponible, bornes libres)"])
+    UC5(["Consulter les formules et tarifs"])
+    UC6(["Souscrire un abonnement"])
+    UC17(["Renouveler un abonnement"])
+    UC18(["Consulter ses abonnements<br/>(en cours / expirés)"])
+    UC7(["Emprunter un vélo"])
+    UC8(["Restituer un vélo"])
+    UC50(["Récupérer un casque"])
+    UC51(["Déposer un casque"])
+    UC9(["Consulter l'historique de ses trajets"])
+    UC12(["Consulter ses factures"])
+    UC10(["Signaler un problème sur un vélo"])
+    UC11(["Signaler un problème sur une station"])
+
+    %% --- Cas inclus (exécutés par le système) ---
+    UC13(["Vérifier les conditions d'emprunt<br/>(abonnement valide, aucun emprunt en cours,<br/>vélo non signalé défectueux)"])
+    UC14(["Calculer la durée et le coût<br/>(suppléments électrique et casque)"])
+    UC15(["Générer la facture"])
+
+    %% --- Paiement (extension de la facture) ---
+    UC16(["Payer"])
+
+    %% --- Opérateurs (régulation et maintenance) ---
+    UC20(["Consulter la position et l'historique d'un vélo"])
+
+    %% --- Opérateur de régulation ---
+    UC25(["Identifier les stations pleines ou vides"])
+    UC26(["Proposer des déplacements de vélos"])
+    UC27(["Enregistrer une tournée de rééquilibrage"])
+    UC31(["Démarrer la tournée<br/>(choix du véhicule)"])
+    UC32(["Charger un vélo<br/>(retrait d'une borne)"])
+    UC33(["Déposer un vélo sur une borne"])
+    UC34(["Clôturer la tournée"])
+    UC35(["Rechercher et filtrer les tournées<br/>(date, véhicule, opérateur)"])
+
+    %% --- Opérateur de maintenance ---
+    UC28(["Consulter les signalements"])
+    UC21(["Gérer les interventions de maintenance"])
+    UC22(["Retirer le vélo"])
+    UC23(["Réparer le vélo"])
+    UC24(["Remettre le vélo en circulation"])
+    UC29(["Changer l'état d'une station<br/>(en service, hors service, en travaux)"])
+    UC30(["Rechercher et filtrer les vélos<br/>(type, état, position, niveau de batterie)"])
+
+    %% --- Administrateur ---
+    UC40(["Gérer les stations et leurs bornes"])
+    UC41(["Gérer la flotte de vélos"])
+    UC45(["Gérer les véhicules de régulation"])
+    UC42(["Gérer les formules tarifaires"])
+    UC43(["Gérer les comptes et les droits"])
+    UC46(["Rechercher et filtrer les locations<br/>(usager, station, période)"])
+
+    %% --- Statistiques (UC44 parent, cas enfants par généralisation) ---
+    UC44(["Consulter les statistiques"])
+    UC48(["Consulter les statistiques des trajets<br/>(nombre par période, heures de pointe,<br/>trajets origine-destination)"])
+    UC49(["Consulter le taux de remplissage des stations<br/>(par tranche horaire)"])
+    UC52(["Consulter les recettes par formule"])
+    UC53(["Consulter le taux d'indisponibilité de la flotte"])
+    UC47(["Générer un rapport<br/>(à partir des statistiques)"])
+  end
+
+  %% Généralisation entre acteurs
+  A -->|"hérite de"| OPR
+  A -->|"hérite de"| OPM
+
+  %% Généralisation entre cas (types de statistiques)
+  UC48 -->|"hérite de"| UC44
+  UC49 -->|"hérite de"| UC44
+  UC52 -->|"hérite de"| UC44
+  UC53 -->|"hérite de"| UC44
+
+  %% Associations Usager
+  U --- UC1
+  U --- UC2
+  U --- UC3
+  U --- UC4
+  U --- UC19
+  U --- UC5
+  U --- UC6
+  U --- UC17
+  U --- UC18
+  U --- UC7
+  U --- UC8
+  U --- UC9
+  U --- UC12
+  U --- UC10
+  U --- UC11
+
+  %% Associations Opérateur de régulation
+  OPR --- UC2
+  OPR --- UC20
+  OPR --- UC25
+  OPR --- UC26
+  OPR --- UC27
+  OPR --- UC35
+  OPR --- UC49
+
+  %% Associations Opérateur de maintenance
+  OPM --- UC2
+  OPM --- UC20
+  OPM --- UC28
+  OPM --- UC21
+  OPM --- UC29
+  OPM --- UC30
+  OPM --- UC53
+
+  %% Associations Administrateur
+  A --- UC40
+  A --- UC41
+  A --- UC45
+  A --- UC42
+  A --- UC43
+  A --- UC46
+  A --- UC44
+
+  %% Include
+  UC6 -.->|"«include»"| UC15
+  UC17 -.->|"«include»"| UC15
+  UC7 -.->|"«include»"| UC13
+  UC8 -.->|"«include»"| UC14
+  UC8 -.->|"«include»"| UC15
+  UC21 -.->|"«include»"| UC22
+  UC21 -.->|"«include»"| UC23
+  UC21 -.->|"«include»"| UC24
+  UC26 -.->|"«include»"| UC25
+  UC27 -.->|"«include»"| UC31
+  UC27 -.->|"«include»"| UC32
+  UC27 -.->|"«include»"| UC33
+  UC27 -.->|"«include»"| UC34
+
+  %% Extend (facultatif ou conditionnel)
+  UC50 -.->|"«extend»"| UC7
+  UC51 -.->|"«extend»"| UC8
+  UC16 -.->|"«extend»<br/>[montant de la facture > 0]"| UC15
+  UC47 -.->|"«extend»"| UC44
+
+  %% Styles
+  classDef actor fill:#ffffff,stroke:#333,stroke-width:2px,color:#000
+  class U,OPR,OPM,A actor

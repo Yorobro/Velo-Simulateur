@@ -1,0 +1,179 @@
+%% Modèle conceptuel (UML, diagramme de classes) — Réseau de vélos en libre-service
+%% Notation UML :
+%%   - classe          : nom + attributs (nom : Type)
+%%   - association     : trait plein, nom de l'association au milieu
+%%   - multiplicités   : écrites à l'extrémité de la classe concernée (1, 0..1, 0..*, 1..*)
+%%   - généralisation  : flèche à triangle vide, de la sous-classe vers la super-classe
+%%   - contraintes     : entre accolades, en note ({complete, disjoint})
+%%   - énumération     : classe stéréotypée <<enumeration>>, utilisée comme type d'attribut
+%% Règles de gestion, dictionnaire des données et contraintes d'intégrité : voir mcd.md
+
+classDiagram
+  direction LR
+
+  %% ===== Classes =====
+  class UTILISATEUR {
+    id_utilisateur : Integer
+    nom : String
+    prenom : String
+    email : String
+    mot_de_passe_hash : String
+    telephone : String
+    date_inscription : DateTime
+    role : Role
+  }
+  class FORMULE {
+    id_formule : Integer
+    libelle : String
+    prix : Decimal
+    duree_validite_jours : Integer
+    duree_gratuite_min : Integer
+    duree_tranche_min : Integer
+    prix_tranche : Decimal
+    supplement_electrique : Decimal
+    supplement_casque : Decimal
+  }
+  class ABONNEMENT {
+    id_abonnement : Integer
+    date_debut : Date
+    date_fin : Date
+  }
+  class FACTURE {
+    id_facture : Integer
+    date_emission : DateTime
+    montant : Decimal
+    date_reglement : DateTime [0..1]
+  }
+  class STATION {
+    id_station : Integer
+    nom : String
+    adresse : String
+    code_postal : String
+    latitude : Decimal
+    longitude : Decimal
+    etat : EtatStation
+  }
+  class BORNE {
+    numero : Integer
+    etat : EtatBorne
+  }
+  class VELO {
+    id_velo : Integer
+    date_mise_service : DateTime
+  }
+  class VELO_ELECTRIQUE {
+    niveau_batterie : Integer
+  }
+  class CHANGEMENT_ETAT {
+    id_changement : Integer
+    date_heure_changement : DateTime
+    etat : EtatVelo
+  }
+  class MOUVEMENT {
+    id_mouvement : Integer
+    date_heure_depart : DateTime
+    date_heure_arrivee : DateTime [0..1]
+  }
+  class LOCATION {
+    avec_casque : Boolean
+  }
+  class TRANSFERT
+  class INTERVENTION {
+    id_intervention : Integer
+    description : String
+  }
+  class INTERVENTION_VELO
+  class INTERVENTION_STATION {
+    date_heure_debut : DateTime
+    date_heure_fin : DateTime [0..1]
+  }
+  class TOURNEE {
+    id_tournee : Integer
+    date_heure_debut : DateTime
+    date_heure_fin : DateTime [0..1]
+  }
+  class VEHICULE {
+    id_vehicule : Integer
+    immatriculation : String
+    capacite : Integer
+  }
+  class SIGNALEMENT {
+    id_signalement : Integer
+    date_heure_signalement : DateTime
+    description : String
+    date_heure_cloture : DateTime [0..1]
+  }
+  class SIGNALEMENT_VELO
+  class SIGNALEMENT_STATION
+
+  %% ===== Énumérations =====
+  class EtatStation {
+    <<enumeration>>
+    EN_SERVICE
+    HORS_SERVICE
+    EN_TRAVAUX
+  }
+  class EtatBorne {
+    <<enumeration>>
+    EN_SERVICE
+    HORS_SERVICE
+  }
+  class Role {
+    <<enumeration>>
+    USAGER
+    OPERATEUR_REGULATION
+    OPERATEUR_MAINTENANCE
+    ADMINISTRATEUR
+  }
+  class EtatVelo {
+    <<enumeration>>
+    EN_SERVICE
+    DEFECTUEUX
+    REFORME
+  }
+
+  %% ===== Généralisations =====
+  VELO <|-- VELO_ELECTRIQUE
+
+  MOUVEMENT <|-- LOCATION
+  MOUVEMENT <|-- TRANSFERT
+  note for MOUVEMENT "{incomplete, disjoint} : un mouvement de maintenance n'est ni une location ni un transfert"
+
+  INTERVENTION <|-- INTERVENTION_VELO
+  INTERVENTION <|-- INTERVENTION_STATION
+
+  SIGNALEMENT <|-- SIGNALEMENT_VELO
+  SIGNALEMENT <|-- SIGNALEMENT_STATION
+
+  %% ===== Utilisateurs, abonnements, facturation =====
+  UTILISATEUR "1" -- "0..*" ABONNEMENT : souscrit
+  ABONNEMENT "0..*" -- "1" FORMULE : relève de
+  ABONNEMENT "0..1" -- "0..1" ABONNEMENT : renouvelle
+  LOCATION "0..*" -- "1" ABONNEMENT : utilise
+  ABONNEMENT "0..1" -- "1" FACTURE : facturer abonnement
+  LOCATION "0..1" -- "0..1" FACTURE : facturer location
+
+  %% ===== Réseau : Stations, bornes =====
+  STATION "1" -- "1..*" BORNE : compose
+  note for BORNE "numero unique dans sa station"
+
+  %% ===== Flotte : position actuelle, états, mouvements =====
+  VELO "0..1" -- "0..1" BORNE : stationne
+  VELO "1" -- "0..*" CHANGEMENT_ETAT : subit
+  MOUVEMENT "0..*" -- "1" VELO : concerne
+  MOUVEMENT "0..*" -- "1" BORNE : part de
+  MOUVEMENT "0..*" -- "0..1" BORNE : arrive à
+
+  %% ===== Régulation =====
+  TRANSFERT "0..*" -- "1" TOURNEE : fait partie
+  TOURNEE "0..*" -- "1" UTILISATEUR : effectuée par
+  TOURNEE "0..*" -- "1" VEHICULE : réalisée avec
+
+  %% ===== Signalements et maintenance =====
+  SIGNALEMENT "0..*" -- "1" UTILISATEUR : émis par
+  SIGNALEMENT_VELO "0..*" -- "1" VELO : porte sur
+  SIGNALEMENT_STATION "0..*" -- "1" STATION : porte sur
+  INTERVENTION "0..*" -- "1" UTILISATEUR : réalisée par
+  INTERVENTION_VELO "0..1" -- "1" MOUVEMENT : donne lieu à
+  SIGNALEMENT_VELO "0..*" -- "0..1" INTERVENTION_VELO : traité par
+  INTERVENTION_STATION "0..*" -- "1" SIGNALEMENT_STATION : traite
