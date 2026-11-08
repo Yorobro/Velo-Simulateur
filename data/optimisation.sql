@@ -171,6 +171,14 @@ CALL opt_supprimer_index('intervention_station', 'fk_intervention_station_signal
 CALL opt_creer_index('tournee', 'idx_tournee_operateur_fin', 'id_utilisateur, date_heure_fin');
 CALL opt_supprimer_index('tournee', 'fk_tournee_utilisateur');
 
+-- Tournée en cours d'un véhicule (trigger trg_tournee_bi, R16) et recherche
+-- des tournées par véhicule (UC35) :
+--   WHERE id_vehicule = ? AND date_heure_fin IS NULL
+-- Remplace l'index de la clé étrangère fk_tournee_vehicule.
+-- (La charge du véhicule, R15, se compte par fk_transfert_tournee : déjà indexé.)
+CALL opt_creer_index('tournee', 'idx_tournee_vehicule_fin', 'id_vehicule, date_heure_fin');
+CALL opt_supprimer_index('tournee', 'fk_tournee_vehicule');
+
 -- ---------------------------------------------------------------- utilisateur
 -- Recherche d'un utilisateur par nom dans l'interface d'administration :
 --   WHERE nom LIKE 'Dup%' [AND prenom LIKE ...]
@@ -211,9 +219,10 @@ SELECT l.id_mouvement AS id_location,
        a.id_utilisateur,
        CONCAT(u.prenom, ' ', u.nom) AS usager,
        l.id_abonnement,
-       f.type AS formule,
+       f.libelle AS formule,
        m.id_velo,
        IF(ve.id_velo IS NULL, 'MECANIQUE', 'ELECTRIQUE') AS type_velo,
+       l.avec_casque,
        m.id_station_depart,
        sd.nom AS station_depart,
        m.date_heure_depart,
@@ -226,7 +235,7 @@ SELECT l.id_mouvement AS id_location,
        IF(m.date_heure_arrivee IS NULL,
           fn_cout_trajet(a.id_formule,
                          CEIL(TIMESTAMPDIFF(SECOND, m.date_heure_depart, NOW()) / 60),
-                         ve.id_velo IS NOT NULL, FALSE),
+                         ve.id_velo IS NOT NULL, l.avec_casque),
           COALESCE(fa.montant, 0)) AS montant,
        fa.id_facture,
        fa.date_reglement
@@ -395,7 +404,7 @@ SELECT s.id_station,
 --  InnoDB recalcule seul les statistiques des index quand 10 % d'une table a
 --  changé. En plus :
 --    - les histogrammes décrivent la répartition des colonnes non indexées
---      souvent filtrées (rôle, états, type de formule) et aident l'optimiseur
+--      souvent filtrées (rôle, états) et aident l'optimiseur
 --      à choisir l'ordre des jointures ; ils ne se mettent pas à jour seuls ;
 --    - rafraichir_statistiques() recalcule tout et est appelée chaque semaine
 --      par un événement planifié.
@@ -425,15 +434,14 @@ CREATE PROCEDURE rafraichir_statistiques()
 BEGIN
   -- statistiques des index de toutes les tables
   ANALYZE TABLE utilisateur, formule, abonnement, station, borne, velo, velo_electrique,
-                changement_etat, tournee, mouvement, location, transfert, facture,
+                changement_etat, vehicule, tournee, mouvement, location, transfert, facture,
                 intervention, intervention_velo, signalement, signalement_velo,
                 signalement_station, intervention_station;
   -- histogrammes des colonnes filtrées sans index
   IF VERSION() LIKE '%MariaDB%' THEN
-    CALL executer_sql('ANALYZE TABLE utilisateur, formule, station, borne, changement_etat PERSISTENT FOR ALL');
+    CALL executer_sql('ANALYZE TABLE utilisateur, station, borne, changement_etat PERSISTENT FOR ALL');
   ELSE
     CALL executer_sql('ANALYZE TABLE utilisateur UPDATE HISTOGRAM ON role WITH 8 BUCKETS');
-    CALL executer_sql('ANALYZE TABLE formule UPDATE HISTOGRAM ON type WITH 8 BUCKETS');
     CALL executer_sql('ANALYZE TABLE station UPDATE HISTOGRAM ON etat WITH 8 BUCKETS');
     CALL executer_sql('ANALYZE TABLE borne UPDATE HISTOGRAM ON etat WITH 8 BUCKETS');
     CALL executer_sql('ANALYZE TABLE changement_etat UPDATE HISTOGRAM ON etat WITH 8 BUCKETS');

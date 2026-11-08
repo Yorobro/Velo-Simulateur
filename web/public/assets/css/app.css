@@ -302,7 +302,7 @@ select.champ { appearance: none; padding-right: 32px; cursor: pointer;
 .velo-carte { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
 .velo-carte .velo-pastille { width: 38px; height: 38px; flex: none; border-radius: 10px; display: grid; place-items: center; }
 .velo-carte strong { display: block; }
-.velo-carte form { margin-left: auto; }
+.velo-carte form, .velo-carte > .btn { margin-left: auto; }
 
 .chrono { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .etapes { display: flex; align-items: center; gap: 10px; color: var(--text-2); }

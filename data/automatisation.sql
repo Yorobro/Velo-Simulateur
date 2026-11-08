@@ -19,7 +19,7 @@
 --                        fn_cout_trajet, fn_cout_location, fn_borne_libre
 --    2. Contrôles        lever_erreur, verifier_borne_accueil,
 --                        verifier_mouvement_libre, verifier_traitement
---    3. Triggers         règles R1 à R14 de structure.sql + historisation
+--    3. Triggers         règles R1 à R21 de structure.sql + historisation
 --                        et calculs automatiques
 --    4. Procédures       une par cas d'utilisation (emprunter_velo, ...)
 --    5. Vues             disponibilité temps réel, régulation, consultation,
@@ -28,11 +28,12 @@
 --  Ce qui est automatique
 --    - position du vélo tenue à jour à chaque départ / arrivée (R5) ;
 --    - historique des états : EN_SERVICE à la mise en service, DEFECTUEUX au
---      retrait pour maintenance, EN_SERVICE à la remise en circulation,
---      REFORME quand le vélo arrive à l'atelier sans borne ;
+--      signalement d'un problème ou au retrait pour maintenance, EN_SERVICE à
+--      la remise en circulation ou à la clôture d'une fausse alerte, REFORME
+--      quand le vélo arrive à l'atelier sans borne (R19, R20) ;
 --    - date de fin d'un abonnement calculée depuis la formule (R11) ;
 --    - facture créée à la souscription d'un abonnement et à la restitution
---      d'une location payante (durée et coût calculés) ;
+--      de chaque location, même gratuite (durée et coût calculés, R4, R18) ;
 --    - signalements de vélo rattachés à l'intervention qui retire le vélo,
 --      puis clos à la fin de l'intervention ;
 --    - e-mail normalisé en minuscules.
@@ -81,6 +82,7 @@ DROP TRIGGER IF EXISTS trg_abonnement_ai;
 DROP TRIGGER IF EXISTS trg_abonnement_bu;
 DROP TRIGGER IF EXISTS trg_facture_bi;
 DROP TRIGGER IF EXISTS trg_facture_bu;
+DROP TRIGGER IF EXISTS trg_borne_bd;
 DROP TRIGGER IF EXISTS trg_velo_bi;
 DROP TRIGGER IF EXISTS trg_velo_ai;
 DROP TRIGGER IF EXISTS trg_velo_bu;
@@ -99,10 +101,13 @@ DROP TRIGGER IF EXISTS trg_intervention_velo_bi;
 DROP TRIGGER IF EXISTS trg_intervention_velo_ai;
 DROP TRIGGER IF EXISTS trg_intervention_station_bi;
 DROP TRIGGER IF EXISTS trg_intervention_station_bu;
+DROP TRIGGER IF EXISTS trg_signalement_bi;
 DROP TRIGGER IF EXISTS trg_signalement_velo_bi;
+DROP TRIGGER IF EXISTS trg_signalement_velo_ai;
 DROP TRIGGER IF EXISTS trg_signalement_velo_bu;
 DROP TRIGGER IF EXISTS trg_signalement_station_bi;
 
+DROP PROCEDURE IF EXISTS creer_station;
 DROP PROCEDURE IF EXISTS souscrire_abonnement;
 DROP PROCEDURE IF EXISTS renouveler_abonnement;
 DROP PROCEDURE IF EXISTS regler_facture;
@@ -198,13 +203,13 @@ BEGIN
 END$$
 
 -- Coût d'une location terminée (NULL si elle est en cours).
-CREATE FUNCTION fn_cout_location(p_location INT UNSIGNED, p_casque BOOLEAN)
+CREATE FUNCTION fn_cout_location(p_location INT UNSIGNED)
 RETURNS DECIMAL(8,2)
 READS SQL DATA
 BEGIN
   RETURN (SELECT fn_cout_trajet(a.id_formule,
                                 fn_duree_minutes(m.date_heure_depart, m.date_heure_arrivee),
-                                ve.id_velo IS NOT NULL, p_casque)
+                                ve.id_velo IS NOT NULL, l.avec_casque)
             FROM location l
             JOIN mouvement m       ON m.id_mouvement = l.id_mouvement
             JOIN abonnement a      ON a.id_abonnement = l.id_abonnement
@@ -352,6 +357,9 @@ CREATE TRIGGER trg_abonnement_bu BEFORE UPDATE ON abonnement FOR EACH ROW
 BEGIN
   IF NEW.id_utilisateur <> OLD.id_utilisateur THEN
     CALL lever_erreur('Un abonnement ne change pas de titulaire.');
+  ELSEIF NOT (NEW.id_abonnement_precedent <=> OLD.id_abonnement_precedent) THEN
+    -- fixé à la création (R11) : empêche aussi un abonnement de se renouveler lui-même
+    CALL lever_erreur('Le lien de renouvellement d''un abonnement ne se modifie pas.');
   END IF;
   SET NEW.date_fin = NEW.date_debut + INTERVAL
       ((SELECT duree_validite_jours FROM formule WHERE id_formule = NEW.id_formule) - 1) DAY;
@@ -374,6 +382,17 @@ BEGIN
           OR NOT (NEW.id_abonnement <=> OLD.id_abonnement)
           OR NOT (NEW.id_location <=> OLD.id_location)) THEN
     CALL lever_erreur('Une facture réglée ne peut plus être modifiée.');
+  END IF;
+END$$
+
+-- ---------------------------------------------------------------- borne
+
+-- R21 : une station garde au moins une borne. (La suppression d'une station
+-- supprime ses bornes en cascade, sans déclencher ce trigger.)
+CREATE TRIGGER trg_borne_bd BEFORE DELETE ON borne FOR EACH ROW
+BEGIN
+  IF (SELECT COUNT(*) FROM borne WHERE id_station = OLD.id_station) <= 1 THEN
+    CALL lever_erreur('Une station doit garder au moins une borne.');
   END IF;
 END$$
 
@@ -520,17 +539,16 @@ BEGIN
        SET id_station = NEW.id_station_arrivee, numero_borne = NEW.numero_borne_arrivee
      WHERE id_velo = NEW.id_velo;
 
-    -- 2. Location : durée et coût calculés, facture si le trajet est payant.
-    --    Le casque n'est pas stocké : restituer_velo transmet le choix de
-    --    l'usager par la variable de session @casque.
+    -- 2. Location (R4, R18) : durée et coût calculés (casque choisi à
+    --    l'emprunt), puis facture du trajet, même à 0 €.
     SET v_montant = (SELECT fn_cout_trajet(a.id_formule,
                                            fn_duree_minutes(NEW.date_heure_depart, NEW.date_heure_arrivee),
                                            EXISTS (SELECT 1 FROM velo_electrique WHERE id_velo = NEW.id_velo),
-                                           COALESCE(@casque, FALSE))
+                                           l.avec_casque)
                        FROM location l
                        JOIN abonnement a ON a.id_abonnement = l.id_abonnement
                       WHERE l.id_mouvement = NEW.id_mouvement);
-    IF v_montant > 0 THEN
+    IF v_montant IS NOT NULL THEN
       INSERT INTO facture (date_emission, montant, id_location)
       VALUES (NEW.date_heure_arrivee, v_montant, NEW.id_mouvement);
     END IF;
@@ -589,7 +607,8 @@ END$$
 -- ---------------------------------------------------------------- tournee / transfert
 
 -- R12 : une tournée est faite par un opérateur de régulation (ou un
--- administrateur), qui n'a qu'une tournée en cours à la fois.
+-- administrateur). R16 : l'opérateur et le véhicule n'ont qu'une tournée en
+-- cours à la fois.
 CREATE TRIGGER trg_tournee_bi BEFORE INSERT ON tournee FOR EACH ROW
 BEGIN
   IF (SELECT role FROM utilisateur WHERE id_utilisateur = NEW.id_utilisateur)
@@ -600,44 +619,57 @@ BEGIN
   ELSEIF EXISTS (SELECT 1 FROM tournee
                   WHERE id_utilisateur = NEW.id_utilisateur AND date_heure_fin IS NULL) THEN
     CALL lever_erreur('Cet opérateur a déjà une tournée en cours.');
+  ELSEIF EXISTS (SELECT 1 FROM tournee
+                  WHERE id_vehicule = NEW.id_vehicule AND date_heure_fin IS NULL) THEN
+    CALL lever_erreur('Ce véhicule est déjà engagé dans une tournée en cours.');
   END IF;
   SET NEW.date_heure_debut = COALESCE(NEW.date_heure_debut, NOW());
 END$$
 
--- Clôture : au moins un transfert (multiplicité 1..*), tous déposés (R14).
+-- R17 : clôture seulement quand tous les vélos chargés sont déposés (R14).
+-- Une tournée peut être clôturée sans transfert (multiplicité 0..*).
 CREATE TRIGGER trg_tournee_bu BEFORE UPDATE ON tournee FOR EACH ROW
 BEGIN
   IF OLD.date_heure_fin IS NOT NULL THEN
     CALL lever_erreur('Une tournée clôturée ne se modifie plus.');
+  END IF;
+  IF NEW.id_vehicule <> OLD.id_vehicule THEN
+    CALL lever_erreur('Le véhicule d''une tournée se choisit au démarrage.');
   END IF;
   IF NEW.id_utilisateur <> OLD.id_utilisateur
      AND (SELECT role FROM utilisateur WHERE id_utilisateur = NEW.id_utilisateur)
          NOT IN ('OPERATEUR_REGULATION', 'ADMINISTRATEUR') THEN
     CALL lever_erreur('Une tournée est effectuée par un opérateur de régulation.');
   END IF;
-  IF NEW.date_heure_fin IS NOT NULL THEN
-    IF NOT EXISTS (SELECT 1 FROM transfert WHERE id_tournee = NEW.id_tournee) THEN
-      CALL lever_erreur('Une tournée sans aucun transfert ne peut pas être clôturée.');
-    ELSEIF EXISTS (SELECT 1 FROM transfert t
-                     JOIN mouvement m ON m.id_mouvement = t.id_mouvement
-                    WHERE t.id_tournee = NEW.id_tournee
-                      AND (m.date_heure_arrivee IS NULL OR m.date_heure_arrivee > NEW.date_heure_fin)) THEN
-      CALL lever_erreur('Tous les vélos chargés doivent être déposés avant la clôture.');
-    END IF;
+  IF NEW.date_heure_fin IS NOT NULL
+     AND EXISTS (SELECT 1 FROM transfert t
+                   JOIN mouvement m ON m.id_mouvement = t.id_mouvement
+                  WHERE t.id_tournee = NEW.id_tournee
+                    AND (m.date_heure_arrivee IS NULL OR m.date_heure_arrivee > NEW.date_heure_fin)) THEN
+    CALL lever_erreur('Tous les vélos chargés doivent être déposés avant la clôture.');
   END IF;
 END$$
 
+-- R8, R14 et R15 : le véhicule ne charge pas plus de vélos que sa capacité.
 CREATE TRIGGER trg_transfert_bi BEFORE INSERT ON transfert FOR EACH ROW
 BEGIN
   DECLARE v_debut, v_fin DATETIME;
+  DECLARE v_capacite TINYINT UNSIGNED;
   CALL verifier_mouvement_libre(NEW.id_mouvement);
-  SELECT date_heure_debut, date_heure_fin INTO v_debut, v_fin
-    FROM tournee WHERE id_tournee = NEW.id_tournee;
+  SELECT t.date_heure_debut, t.date_heure_fin, v.capacite INTO v_debut, v_fin, v_capacite
+    FROM tournee t
+    JOIN vehicule v ON v.id_vehicule = t.id_vehicule
+   WHERE t.id_tournee = NEW.id_tournee;
   IF v_fin IS NOT NULL THEN
     CALL lever_erreur('Cette tournée est déjà clôturée.');
   ELSEIF (SELECT date_heure_depart FROM mouvement
            WHERE id_mouvement = NEW.id_mouvement) < v_debut THEN
     CALL lever_erreur('Ce transfert commence avant la tournée.');
+  ELSEIF (SELECT COUNT(*) FROM transfert t
+            JOIN mouvement m ON m.id_mouvement = t.id_mouvement
+           WHERE t.id_tournee = NEW.id_tournee
+             AND m.date_heure_arrivee IS NULL) >= v_capacite THEN
+    CALL lever_erreur('Le véhicule est plein : déposez un vélo avant d''en charger un autre.');
   END IF;
 END$$
 
@@ -720,6 +752,14 @@ END$$
 
 -- ---------------------------------------------------------------- signalements
 
+-- R12 : seul un usager signale un problème (cas d'utilisation UC10, UC11).
+CREATE TRIGGER trg_signalement_bi BEFORE INSERT ON signalement FOR EACH ROW
+BEGIN
+  IF (SELECT role FROM utilisateur WHERE id_utilisateur = NEW.id_utilisateur) <> 'USAGER' THEN
+    CALL lever_erreur('Seul un usager peut émettre un signalement.');
+  END IF;
+END$$
+
 -- R9 : un signalement porte sur un vélo OU une station ; R13 / R14.
 CREATE TRIGGER trg_signalement_velo_bi BEFORE INSERT ON signalement_velo FOR EACH ROW
 BEGIN
@@ -728,6 +768,22 @@ BEGIN
   END IF;
   IF NEW.id_intervention_velo IS NOT NULL THEN
     CALL verifier_traitement(NEW.id_signalement, NEW.id_velo, NEW.id_intervention_velo);
+  END IF;
+END$$
+
+-- R20 (et R3) : un vélo signalé passe DEFECTUEUX, il n'est plus empruntable
+-- jusqu'à sa réparation ou la clôture d'une fausse alerte.
+CREATE TRIGGER trg_signalement_velo_ai AFTER INSERT ON signalement_velo FOR EACH ROW
+BEGIN
+  DECLARE v_quand, v_dernier DATETIME;
+  IF fn_etat_velo(NEW.id_velo) = 'EN_SERVICE' THEN
+    SET v_quand = (SELECT date_heure_signalement FROM signalement
+                    WHERE id_signalement = NEW.id_signalement);
+    SET v_dernier = (SELECT MAX(date_heure_changement) FROM changement_etat
+                      WHERE id_velo = NEW.id_velo);
+    -- jamais avant (ni au même instant que) le dernier changement d'état
+    INSERT INTO changement_etat (date_heure_changement, etat, id_velo)
+    VALUES (GREATEST(v_quand, v_dernier + INTERVAL 1 SECOND), 'DEFECTUEUX', NEW.id_velo);
   END IF;
 END$$
 
@@ -755,6 +811,31 @@ END$$
 -- =============================================================================
 --  Chaque procédure est une transaction : en cas d'erreur, tout est annulé et
 --  l'erreur est renvoyée à l'appelant (RESIGNAL).
+
+-- ---------------------------------------------------------------- stations
+
+-- Créer une station avec ses p_nb_bornes bornes (numérotées 1, 2, ...) dans
+-- la même transaction : une station a toujours au moins une borne (R21).
+CREATE PROCEDURE creer_station(IN p_nom VARCHAR(100), IN p_adresse VARCHAR(255),
+                               IN p_code_postal CHAR(5), IN p_latitude DECIMAL(8,6),
+                               IN p_longitude DECIMAL(9,6), IN p_nb_bornes SMALLINT UNSIGNED,
+                               OUT p_station INT UNSIGNED)
+BEGIN
+  DECLARE v_numero SMALLINT UNSIGNED DEFAULT 1;
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  START TRANSACTION;
+  IF COALESCE(p_nb_bornes, 0) < 1 THEN
+    CALL lever_erreur('Une station a au moins une borne.');
+  END IF;
+  INSERT INTO station (nom, adresse, code_postal, latitude, longitude)
+  VALUES (p_nom, p_adresse, p_code_postal, p_latitude, p_longitude);
+  SET p_station = LAST_INSERT_ID();
+  WHILE v_numero <= p_nb_bornes DO
+    INSERT INTO borne (id_station, numero) VALUES (p_station, v_numero);
+    SET v_numero = v_numero + 1;
+  END WHILE;
+  COMMIT;
+END$$
 
 -- ---------------------------------------------------------------- abonnements
 
@@ -797,11 +878,14 @@ BEGIN
   COMMIT;
 END$$
 
--- Payer une facture.
+-- Payer une facture (seulement si son montant est supérieur à 0).
 CREATE PROCEDURE regler_facture(IN p_facture INT UNSIGNED)
 BEGIN
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
   START TRANSACTION;
+  IF (SELECT montant FROM facture WHERE id_facture = p_facture) = 0 THEN
+    CALL lever_erreur('Facture à 0 € : rien à régler.');
+  END IF;
   UPDATE facture SET date_reglement = NOW()
    WHERE id_facture = p_facture AND date_reglement IS NULL;
   IF ROW_COUNT() = 0 THEN
@@ -812,11 +896,13 @@ END$$
 
 -- ---------------------------------------------------------------- locations
 
--- Emprunter un vélo. Verrouille l'usager (R1) et le vélo (deux emprunts
+-- Emprunter un vélo (p_avec_casque : l'usager récupère un casque, facturé
+-- à la restitution). Verrouille l'usager (R1) et le vélo (deux emprunts
 -- simultanés du même vélo sont impossibles) ; les règles sont vérifiées par
 -- les triggers de mouvement et de location.
 CREATE PROCEDURE emprunter_velo(IN p_utilisateur INT UNSIGNED,
                                 IN p_velo INT UNSIGNED,
+                                IN p_avec_casque BOOLEAN,
                                 OUT p_location INT UNSIGNED)
 BEGIN
   DECLARE v_abonnement, v_verrou INT UNSIGNED;
@@ -831,7 +917,8 @@ BEGIN
   END IF;
   INSERT INTO mouvement (id_velo) VALUES (p_velo);
   SET p_location = LAST_INSERT_ID();
-  INSERT INTO location (id_mouvement, id_abonnement) VALUES (p_location, v_abonnement);
+  INSERT INTO location (id_mouvement, avec_casque, id_abonnement)
+  VALUES (p_location, COALESCE(p_avec_casque, FALSE), v_abonnement);
   COMMIT;
 END$$
 
@@ -860,31 +947,31 @@ BEGIN
    WHERE id_mouvement = p_mouvement;
 END$$
 
--- Restituer un vélo. Le coût (et la facture) sont calculés par trigger ;
--- p_avec_casque ajoute le supplément casque de la formule.
+-- Restituer un vélo (et le casque éventuel). La durée, le coût et la
+-- facture sont calculés par trigger.
 CREATE PROCEDURE restituer_velo(IN p_location INT UNSIGNED,
                                 IN p_station INT UNSIGNED,
-                                IN p_numero_borne SMALLINT UNSIGNED,
-                                IN p_avec_casque BOOLEAN)
+                                IN p_numero_borne SMALLINT UNSIGNED)
 BEGIN
-  DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; SET @casque = NULL; RESIGNAL; END;
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
   START TRANSACTION;
   IF NOT EXISTS (SELECT 1 FROM location WHERE id_mouvement = p_location) THEN
     CALL lever_erreur('Location inconnue.');
   END IF;
-  SET @casque = COALESCE(p_avec_casque, FALSE);
   CALL enregistrer_arrivee(p_location, p_station, p_numero_borne);
-  SET @casque = NULL;
   COMMIT;
 END$$
 
 -- ---------------------------------------------------------------- régulation
 
-CREATE PROCEDURE demarrer_tournee(IN p_operateur INT UNSIGNED, OUT p_tournee INT UNSIGNED)
+-- Démarrer une tournée avec le véhicule choisi par l'opérateur (UC31).
+CREATE PROCEDURE demarrer_tournee(IN p_operateur INT UNSIGNED, IN p_vehicule INT UNSIGNED,
+                                  OUT p_tournee INT UNSIGNED)
 BEGIN
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
   START TRANSACTION;
-  INSERT INTO tournee (date_heure_debut, id_utilisateur) VALUES (NOW(), p_operateur);
+  INSERT INTO tournee (date_heure_debut, id_utilisateur, id_vehicule)
+  VALUES (NOW(), p_operateur, p_vehicule);
   SET p_tournee = LAST_INSERT_ID();
   COMMIT;
 END$$
@@ -955,14 +1042,29 @@ BEGIN
 END$$
 
 -- Clore un signalement sans intervention (problème inexistant ou résolu).
+-- R20 : un vélo passé DEFECTUEUX par une fausse alerte redevient EN_SERVICE,
+-- sauf s'il est en atelier ou qu'un autre signalement reste ouvert.
 CREATE PROCEDURE cloturer_signalement(IN p_signalement INT UNSIGNED)
 BEGIN
+  DECLARE v_velo INT UNSIGNED;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
   START TRANSACTION;
   UPDATE signalement SET date_heure_cloture = NOW()
    WHERE id_signalement = p_signalement AND date_heure_cloture IS NULL;
   IF ROW_COUNT() = 0 THEN
     CALL lever_erreur('Signalement inconnu ou déjà clos.');
+  END IF;
+  SET v_velo = (SELECT id_velo FROM signalement_velo WHERE id_signalement = p_signalement);
+  IF v_velo IS NOT NULL
+     AND fn_etat_velo(v_velo) = 'DEFECTUEUX'
+     AND NOT EXISTS (SELECT 1 FROM mouvement m
+                       JOIN intervention_velo iv ON iv.id_mouvement = m.id_mouvement
+                      WHERE m.id_velo = v_velo AND m.date_heure_arrivee IS NULL)
+     AND NOT EXISTS (SELECT 1 FROM signalement_velo sv
+                       JOIN signalement s ON s.id_signalement = sv.id_signalement
+                      WHERE sv.id_velo = v_velo AND s.date_heure_cloture IS NULL) THEN
+    INSERT INTO changement_etat (date_heure_changement, etat, id_velo)
+    VALUES (NOW(), 'EN_SERVICE', v_velo);
   END IF;
   COMMIT;
 END$$
@@ -1179,9 +1281,10 @@ SELECT l.id_mouvement AS id_location,
        a.id_utilisateur,
        CONCAT(u.prenom, ' ', u.nom) AS usager,
        l.id_abonnement,
-       f.type AS formule,
+       f.libelle AS formule,
        m.id_velo,
        IF(ve.id_velo IS NULL, 'MECANIQUE', 'ELECTRIQUE') AS type_velo,
+       l.avec_casque,
        m.id_station_depart,
        sd.nom AS station_depart,
        m.date_heure_depart,
@@ -1192,7 +1295,7 @@ SELECT l.id_mouvement AS id_location,
        fn_duree_minutes(m.date_heure_depart, COALESCE(m.date_heure_arrivee, NOW())) AS duree_min,
        IF(m.date_heure_arrivee IS NULL,
           fn_cout_trajet(a.id_formule, fn_duree_minutes(m.date_heure_depart, NOW()),
-                         ve.id_velo IS NOT NULL, FALSE),
+                         ve.id_velo IS NOT NULL, l.avec_casque),
           COALESCE(fa.montant, 0)) AS montant,
        fa.id_facture,
        fa.date_reglement
@@ -1211,7 +1314,7 @@ CREATE VIEW v_abonnement AS
 SELECT a.id_abonnement,
        a.id_utilisateur,
        CONCAT(u.prenom, ' ', u.nom) AS usager,
-       f.type AS formule,
+       f.libelle AS formule,
        a.date_debut,
        a.date_fin,
        CASE
@@ -1292,7 +1395,7 @@ SELECT RANK() OVER (ORDER BY COUNT(*) DESC) AS rang,
 -- Recettes par formule : abonnements + locations, facturé et encaissé.
 CREATE VIEW v_stat_recettes_formule AS
 SELECT f.id_formule,
-       f.type AS formule,
+       f.libelle AS formule,
        COUNT(r.id_facture) AS nb_factures,
        COALESCE(SUM(IF(r.origine = 'ABONNEMENT', r.montant, 0)), 0) AS recettes_abonnements,
        COALESCE(SUM(IF(r.origine = 'LOCATION', r.montant, 0)), 0)   AS recettes_locations,
@@ -1310,7 +1413,7 @@ SELECT f.id_formule,
                JOIN location l   ON l.id_mouvement = fa.id_location
                JOIN abonnement a ON a.id_abonnement = l.id_abonnement) r
          ON r.id_formule = f.id_formule
- GROUP BY f.id_formule, f.type;
+ GROUP BY f.id_formule, f.libelle;
 
 -- Indisponibilité de la flotte, par type et au total (ligne 'TOUS') :
 -- situation actuelle et part du temps passé DEFECTUEUX sur 30 jours

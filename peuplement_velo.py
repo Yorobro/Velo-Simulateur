@@ -9,10 +9,12 @@ travail), tournées de rééquilibrage, signalements, interventions de
 maintenance, réformes, factures et règlements.
 
 Toutes les règles de la base sont respectées (contraintes de structure.sql et
-règles R1 à R14 tenues ensuite par les triggers) : un vélo à un seul endroit,
+règles R1 à R21 tenues ensuite par les triggers) : un vélo à un seul endroit,
 une borne = un vélo, une location à la fois par usager, abonnement valide,
-pas d'emprunt d'un vélo défectueux, montants calculés selon la formule, rôles
-des opérateurs, dates cohérentes. À la date courante, la base contient aussi
+pas d'emprunt d'un vélo défectueux (un vélo signalé passe DEFECTUEUX),
+montants calculés selon la formule, une facture par location terminée (même
+à 0 €), rôles des opérateurs, capacité des véhicules de régulation, dates
+cohérentes. À la date courante, la base contient aussi
 des situations en cours : locations, tournée, vélos en atelier, vélos bloqués
 sur leur borne, signalements ouverts.
 
@@ -66,16 +68,20 @@ except ImportError:
 MOT_DE_PASSE_DEMO = "velo2026"
 EMPREINTE_DEMO = "$2y$10$F8AZNwHgSxkQUcHkv3NC8OfyvAn3A8JyfOQ6SRNxIibn0u5Xj3KUO"
 
-# id, type, prix, validité (j), gratuit (min), tranche (min), prix tranche,
+# id, libellé, prix, validité (j), gratuit (min), tranche (min), prix tranche,
 # supplément électrique, supplément casque — prix en centimes
 FORMULES = [
-    (1, "TICKET_JOURNEE", 500, 1, 30, 30, 100, 100, 100),
-    (2, "MENSUEL", 1500, 30, 45, 30, 100, 50, 50),
-    (3, "ANNUEL", 12000, 365, 45, 30, 75, 50, 50),
-    (4, "TARIF_REDUIT", 6000, 365, 45, 30, 50, 25, 25),
+    (1, "Ticket journée", 500, 1, 30, 30, 100, 100, 100),
+    (2, "Mensuel", 1500, 30, 45, 30, 100, 50, 50),
+    (3, "Annuel", 12000, 365, 45, 30, 75, 50, 50),
+    (4, "Tarif réduit", 6000, 365, 45, 30, 50, 25, 25),
 ]
 FORMULE = {f[0]: f for f in FORMULES}
+# profil d'usager -> formule
 ID_FORMULE = {"TICKET_JOURNEE": 1, "MENSUEL": 2, "ANNUEL": 3, "TARIF_REDUIT": 4}
+
+# Véhicules de régulation : immatriculation, capacité (vélos transportés à la fois)
+VEHICULES = [("FG-482-KL", 12), ("HM-157-PZ", 12), ("BV-903-RT", 10), ("KD-318-WX", 14)]
 
 # commune : (code postal, latitude, longitude du centre, rayon en km)
 COMMUNES = {
@@ -191,7 +197,7 @@ PANNES_STATION = [
 COLONNES = {
     "utilisateur": ("id_utilisateur", "nom", "prenom", "email", "mot_de_passe_hash", "telephone",
                     "date_inscription", "role"),
-    "formule": ("id_formule", "type", "prix", "duree_validite_jours", "duree_gratuite_min",
+    "formule": ("id_formule", "libelle", "prix", "duree_validite_jours", "duree_gratuite_min",
                 "duree_tranche_min", "prix_tranche", "supplement_electrique", "supplement_casque"),
     "abonnement": ("id_abonnement", "date_debut", "date_fin", "id_utilisateur", "id_formule",
                    "id_abonnement_precedent"),
@@ -200,10 +206,11 @@ COLONNES = {
     "velo": ("id_velo", "date_mise_service", "id_station", "numero_borne"),
     "velo_electrique": ("id_velo", "niveau_batterie"),
     "changement_etat": ("id_changement", "date_heure_changement", "etat", "id_velo"),
-    "tournee": ("id_tournee", "date_heure_debut", "date_heure_fin", "id_utilisateur"),
+    "vehicule": ("id_vehicule", "immatriculation", "capacite"),
+    "tournee": ("id_tournee", "date_heure_debut", "date_heure_fin", "id_utilisateur", "id_vehicule"),
     "mouvement": ("id_mouvement", "date_heure_depart", "date_heure_arrivee", "id_velo",
                   "id_station_depart", "numero_borne_depart", "id_station_arrivee", "numero_borne_arrivee"),
-    "location": ("id_mouvement", "id_abonnement"),
+    "location": ("id_mouvement", "avec_casque", "id_abonnement"),
     "transfert": ("id_mouvement", "id_tournee"),
     "facture": ("id_facture", "date_emission", "montant", "date_reglement", "id_abonnement", "id_location"),
     "intervention": ("id_intervention", "description", "id_utilisateur"),
@@ -283,6 +290,7 @@ class Simulation:
         self.sig_ouverts: dict[int, list] = defaultdict(list)   # vélo -> signalements non traités
         self.usagers_en_location: set[int] = set()
         self.fin_tournee_op: dict[int, dt.datetime] = {}
+        self.fin_tournee_veh: dict[int, dt.datetime] = {}
 
     # ------------------------------------------------------------- outils
     def nouvel_id(self, table: str) -> int:
@@ -306,8 +314,13 @@ class Simulation:
 
     # ------------------------------------------------------------- référentiels
     def creer_formules(self):
-        for (i, typ, prix, val, grat, tr, ptr, se, sc) in FORMULES:
-            self.t["formule"].append((i, typ, euros(prix), val, grat, tr, euros(ptr), euros(se), euros(sc)))
+        for (i, libelle, prix, val, grat, tr, ptr, se, sc) in FORMULES:
+            self.t["formule"].append((i, libelle, euros(prix), val, grat, tr, euros(ptr), euros(se), euros(sc)))
+
+    def creer_vehicules(self):
+        for immatriculation, capacite in VEHICULES:
+            self.t["vehicule"].append((self.nouvel_id("vehicule"), immatriculation, capacite))
+        self.capacite_vehicule = {v[0]: v[2] for v in self.t["vehicule"]}
 
     def creer_stations(self):
         nb = max(10, min(self.cfg.stations, 200))
@@ -481,7 +494,9 @@ class Simulation:
 
     def ajouter_facture(self, emission, centimes, abonnement=None, location=None):
         tirage = self.rng.random()
-        if tirage < 0.95:
+        if centimes == 0:   # facture à 0 € : rien à régler
+            reglement = None
+        elif tirage < 0.95:
             reglement = emission + minutes(self.rng.randint(0, 5))
         elif tirage < 0.99 or (self.maintenant - emission).days < 10:
             reglement = emission + dt.timedelta(days=self.rng.randint(1, 20), hours=self.rng.randint(0, 10))
@@ -656,9 +671,9 @@ class Simulation:
         if self.rng.random() < 0.03:
             duree += self.rng.randint(45, 200)
         mid = self.nouveau_mouvement(v, quand)
-        self.t["location"].append((mid, aid))
+        casque = self.rng.random() < 0.08   # casque récupéré à l'emprunt
+        self.t["location"].append((mid, casque, aid))
         self.usagers_en_location.add(u["id"])
-        casque = self.rng.random() < 0.08
         self.planifier(quand + minutes(max(2, duree)), "ev_restitution", mid, u, dest, aid, casque)
 
     def ev_restitution(self, quand, mid, u, dest, aid, casque):
@@ -672,7 +687,7 @@ class Simulation:
             return
         self.arrivee(mid, quand, dest)
         self.usagers_en_location.discard(u["id"])
-        # coût (même calcul que fn_cout_trajet) et facture si le trajet est payant
+        # coût (même calcul que fn_cout_trajet) et facture du trajet, même à 0 €
         m = self.mouvements[mid]
         duree = int((quand - m[1]).total_seconds() // 60)
         f = FORMULE[self.formule_abonnement[aid]]
@@ -680,8 +695,7 @@ class Simulation:
         cout = math.ceil(max(0, duree - gratuit) / tranche) * prix_tranche
         cout += supp_elec if self.electrique[m[3]] else 0
         cout += supp_casque if casque else 0
-        if cout > 0:
-            self.ajouter_facture(quand, cout, location=mid)
+        self.ajouter_facture(quand, cout, location=mid)
         # signalement d'un problème après le trajet
         if self.rng.random() < 0.007:
             self.planifier(quand + minutes(self.rng.randint(1, 10)), "ev_signalement_velo", m[3], u["id"])
@@ -701,23 +715,30 @@ class Simulation:
         sid = self.nouveau_signalement(quand, panne[0] if vraie else self.rng.choice(FAUSSES_ALERTES), auteur)
         self.sig_velo[sid] = [sid, v, None]
         self.sig_ouverts[v].append(sid)
+        # R20 : le vélo signalé passe DEFECTUEUX (comme trg_signalement_velo_ai),
+        # il n'est plus empruntable. S'il vient d'être emprunté à la même
+        # minute, le changement d'état suit le départ d'une seconde.
+        if self.etat[v] == "EN_SERVICE":
+            seconde = dt.timedelta(seconds=1)
+            quand_etat = quand + seconde if self.pos.get(v) is None else quand
+            self.changer_etat(v, "DEFECTUEUX", max(quand_etat, self.etat_depuis[v] + seconde))
         if vraie:
-            if self.rng.random() < 0.5:   # blocage à distance : le vélo n'est plus empruntable
-                self.planifier(quand + minutes(self.rng.randint(15, 120)), "ev_blocage", v)
             delai = dt.timedelta(hours=self.rng.randint(2, 50))
             self.planifier(self.heure_ouvree(quand + delai), "ev_retrait", v, panne)
-        else:
-            self.planifier(quand + dt.timedelta(days=self.rng.randint(1, 4)), "ev_cloture_signalement", sid, v)
-
-    def ev_blocage(self, quand, v):
-        if self.pos.get(v) and self.etat[v] == "EN_SERVICE" and quand > self.etat_depuis[v]:
-            self.changer_etat(v, "DEFECTUEUX", quand)
+        else:   # fausse alerte : un opérateur vérifie le vélo et clôt le signalement
+            delai = dt.timedelta(hours=self.rng.randint(1, 24))
+            self.planifier(self.heure_ouvree(quand + delai), "ev_cloture_signalement", sid, v)
 
     def ev_cloture_signalement(self, quand, sid, v):
         s = self.signalements[sid]
         if s[3] is None and self.sig_velo[sid][2] is None:
             s[3] = quand
             self.sig_ouverts[v].remove(sid)
+            # R20 : fausse alerte close, le vélo redevient EN_SERVICE (comme
+            # cloturer_signalement) s'il n'est pas en atelier et sans autre signalement
+            if (self.etat[v] == "DEFECTUEUX" and v not in self.en_atelier and not self.sig_ouverts[v]
+                    and quand > self.etat_depuis[v]):
+                self.changer_etat(v, "EN_SERVICE", quand)
 
     def operateur_maintenance(self) -> int:
         if self.rng.random() < 0.05:
@@ -779,13 +800,12 @@ class Simulation:
 
     def ev_signalement_station(self, quand):
         liste = self.eligibles.get(quand.date())
-        if self.rng.random() < 0.1 or not liste:
-            auteur = self.rng.choice(self.regulation)
-        else:
-            u = self.rng.choice(liste)
-            if u["inscription"] >= quand:
-                return
-            auteur = u["id"]
+        if not liste:   # R12 : seul un usager signale un problème
+            return
+        u = self.rng.choice(liste)
+        if u["inscription"] >= quand:
+            return
+        auteur = u["id"]
         st = self.par_id[self.station_au_hasard(POPULARITE)]
         numero = self.rng.choice(st["bornes"])
         texte_sig, texte_interv = self.rng.choice(PANNES_STATION)
@@ -822,7 +842,10 @@ class Simulation:
         for st in self.stations:
             if st["nom"] not in FERMEES:
                 continue
-            auteur = self.rng.choice(self.regulation)
+            # R12 : l'auteur est un usager inscrit avant le signalement (au plus tôt : J-21)
+            inscrits = [u["id"] for u in self.usagers
+                        if u["inscription"] < self.maintenant - dt.timedelta(days=21)]
+            auteur = self.rng.choice(inscrits)
             if FERMEES[st["nom"]] == "EN_TRAVAUX":
                 sid = self.nouveau_signalement(self.maintenant - dt.timedelta(days=21),
                                                "Station endommagée par un véhicule : bornes arrachées.", auteur)
@@ -852,7 +875,9 @@ class Simulation:
 
     def ev_tournee(self, quand, forcee):
         libres_op = [o for o in self.regulation if self.fin_tournee_op.get(o, self.debut) <= quand]
-        if not libres_op:
+        # R16 : un véhicule n'est engagé que dans une tournée à la fois
+        libres_veh = [v for v in self.capacite_vehicule if self.fin_tournee_veh.get(v, self.debut) <= quand]
+        if not libres_op or not libres_veh:
             return
         etat = []
         for s in self.actives:
@@ -871,12 +896,13 @@ class Simulation:
             sources = {e[0]: min(2, len(self.dispo[e[0]])) for e in tri[-2:] if self.dispo[e[0]]}
         if not sources or not destinations:
             return
-        capacite = self.rng.randint(8, 14)
-        nb = min(capacite, sum(sources.values()), sum(destinations.values()))
+        veh = self.rng.choice(libres_veh)
+        # R15 : pas plus de vélos à bord que la capacité du véhicule
+        nb = min(self.capacite_vehicule[veh], sum(sources.values()), sum(destinations.values()))
         charges = [s for s, k in sorted(sources.items(), key=lambda x: -x[1]) for _ in range(k)][:nb]
         depots = [d for d, k in sorted(destinations.items(), key=lambda x: -x[1]) for _ in range(k)][:nb]
         op = self.rng.choice(libres_op)
-        tournee = dict(id=None, op=op, debut=quand, charges={})
+        tournee = dict(id=None, op=op, veh=veh, debut=quand, charges={})
         t = quand + minutes(self.rng.randint(5, 10))
         for i, s in enumerate(charges):
             if i and s != charges[i - 1]:
@@ -890,15 +916,15 @@ class Simulation:
             self.planifier(t, "ev_deposer", tournee, d, i)
             t += minutes(2)
         fin = t + minutes(self.rng.randint(3, 8))
-        self.fin_tournee_op[op] = fin
+        self.fin_tournee_op[op] = self.fin_tournee_veh[veh] = fin
         self.planifier(fin, "ev_fin_tournee", tournee)
 
     def ev_charger(self, quand, tournee, sid, i):
         if not self.dispo[sid]:
             return
-        if tournee["id"] is None:   # la tournée n'existe qu'avec au moins un transfert
+        if tournee["id"] is None:   # on ne garde que les tournées qui ont déplacé au moins un vélo
             tournee["id"] = self.nouvel_id("tournee")
-            self.tournees[tournee["id"]] = [tournee["id"], tournee["debut"], None, tournee["op"]]
+            self.tournees[tournee["id"]] = [tournee["id"], tournee["debut"], None, tournee["op"], tournee["veh"]]
         v = self.rng.choice(sorted(self.dispo[sid]))
         mid = self.nouveau_mouvement(v, quand)
         self.t["transfert"].append((mid, tournee["id"]))
@@ -922,19 +948,20 @@ class Simulation:
             for i, mid in list(tournee["charges"].items()):
                 sid = self.station_avec_place()
                 if sid is None:
-                    self.fin_tournee_op[tournee["op"]] = quand + minutes(15)
+                    self.fin_tournee_op[tournee["op"]] = self.fin_tournee_veh[tournee["veh"]] = quand + minutes(15)
                     self.planifier(quand + minutes(15), "ev_fin_tournee", tournee)
                     return
                 self.arrivee(mid, quand, sid)
                 del tournee["charges"][i]
             quand += MINUTE
         self.tournees[tournee["id"]][2] = quand
-        self.fin_tournee_op[tournee["op"]] = quand
+        self.fin_tournee_op[tournee["op"]] = self.fin_tournee_veh[tournee["veh"]] = quand
 
     # ------------------------------------------------------------- exécution
     def executer(self):
         top = time.time()
         self.creer_formules()
+        self.creer_vehicules()
         self.creer_stations()
         self.creer_utilisateurs()
         self.formule_abonnement = {}

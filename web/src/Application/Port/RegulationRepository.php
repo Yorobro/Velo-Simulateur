@@ -23,7 +23,10 @@ interface RegulationRepository
 
     public function operateurDeTournee(int $tournee): ?int;
 
-    public function demarrer(int $operateur): int;
+    /** @return list<array<string, mixed>> véhicules qui ne sont engagés dans aucune tournée en cours */
+    public function vehiculesLibres(): array;
+
+    public function demarrer(int $operateur, int $vehicule): int;
 
     public function charger(int $tournee, int $velo): int;
 

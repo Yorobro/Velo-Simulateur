@@ -29,9 +29,10 @@ final class PdoRegulationRepository implements RegulationRepository
     public function tourneeEnCours(int $operateur): ?array
     {
         return $this->db->ligne(
-            'SELECT t.id_tournee, t.date_heure_debut,
+            'SELECT t.id_tournee, t.date_heure_debut, v.immatriculation, v.capacite,
                     (SELECT COUNT(*) FROM transfert tr WHERE tr.id_tournee = t.id_tournee) AS nb_transferts
                FROM tournee t
+               JOIN vehicule v ON v.id_vehicule = t.id_vehicule
               WHERE t.id_utilisateur = ? AND t.date_heure_fin IS NULL
               LIMIT 1',
             [$operateur],
@@ -57,12 +58,13 @@ final class PdoRegulationRepository implements RegulationRepository
     public function tourneesRecentes(int $limite): array
     {
         return $this->db->lignes(
-            'SELECT t.id_tournee, t.date_heure_debut, t.date_heure_fin,
+            'SELECT t.id_tournee, t.date_heure_debut, t.date_heure_fin, v.immatriculation,
                     CONCAT(u.prenom, \' \', u.nom) AS operateur, COUNT(tr.id_mouvement) AS nb_velos
                FROM (SELECT * FROM tournee ORDER BY date_heure_debut DESC LIMIT ?) t
                JOIN utilisateur u       ON u.id_utilisateur = t.id_utilisateur
+               JOIN vehicule v          ON v.id_vehicule = t.id_vehicule
                LEFT JOIN transfert tr   ON tr.id_tournee = t.id_tournee
-              GROUP BY t.id_tournee, t.date_heure_debut, t.date_heure_fin, u.prenom, u.nom
+              GROUP BY t.id_tournee, t.date_heure_debut, t.date_heure_fin, v.immatriculation, u.prenom, u.nom
               ORDER BY t.date_heure_debut DESC',
             [$limite],
         );
@@ -75,9 +77,20 @@ final class PdoRegulationRepository implements RegulationRepository
         return $id === null ? null : (int) $id;
     }
 
-    public function demarrer(int $operateur): int
+    public function vehiculesLibres(): array
     {
-        return (int) $this->db->appeler('demarrer_tournee', [$operateur], 1)[0];
+        return $this->db->lignes(
+            'SELECT v.id_vehicule, v.immatriculation, v.capacite
+               FROM vehicule v
+              WHERE NOT EXISTS (SELECT 1 FROM tournee t
+                                 WHERE t.id_vehicule = v.id_vehicule AND t.date_heure_fin IS NULL)
+              ORDER BY v.immatriculation',
+        );
+    }
+
+    public function demarrer(int $operateur, int $vehicule): int
+    {
+        return (int) $this->db->appeler('demarrer_tournee', [$operateur, $vehicule], 1)[0];
     }
 
     public function charger(int $tournee, int $velo): int

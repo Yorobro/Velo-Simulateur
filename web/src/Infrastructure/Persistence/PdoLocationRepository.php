@@ -67,13 +67,13 @@ final class PdoLocationRepository implements LocationRepository
         return $id === null ? null : (int) $id;
     }
 
-    public function emprunter(int $utilisateur, int $velo): int
+    public function emprunter(int $utilisateur, int $velo, bool $casque): int
     {
-        return (int) $this->db->appeler('emprunter_velo', [$utilisateur, $velo], 1)[0];
+        return (int) $this->db->appeler('emprunter_velo', [$utilisateur, $velo, $casque], 1)[0];
     }
 
-    public function restituer(int $location, int $station, bool $casque): void
+    public function restituer(int $location, int $station): void
     {
-        $this->db->appeler('restituer_velo', [$location, $station, null, $casque]);
+        $this->db->appeler('restituer_velo', [$location, $station, null]);
     }
 }

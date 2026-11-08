@@ -23,7 +23,7 @@
         <div class="carte carte-mise-en-avant">
           <div class="carte-entete">
             <span class="kpi-icone ton-info">{{ icone('velo', 20) }}</span>
-            <div><h2>Location en cours</h2><p>Vélo n° {{ location.id_velo }} · emprunté à {{ location.station_depart }}</p></div>
+            <div><h2>Location en cours</h2><p>Vélo n° {{ location.id_velo }} · emprunté à {{ location.station_depart }}{{ location.avec_casque ? ' · avec casque' }}</p></div>
             <div class="actions">{{ ui.type_velo(location.type_velo) }}</div>
           </div>
           <div class="carte-corps">
@@ -44,7 +44,7 @@
                   <option value="{{ st.id_station }}">{{ st.nom }} — {{ st.bornes_libres }} borne{{ st.bornes_libres > 1 ? 's' }} libre{{ st.bornes_libres > 1 ? 's' }}</option>
                 {% endfor %}
               </select>
-              <label class="case"><input type="checkbox" name="casque" value="1"> Casque loué</label>
+              {% if location.avec_casque %}<small>Pensez à déposer le casque avec le vélo.</small>{% endif %}
               <button class="btn" type="submit">{{ icone('ok', 16) }} Restituer le vélo</button>
             </div>
           </form>
@@ -73,22 +73,25 @@
               {% if velos is empty %}
                 {{ ui.vide('velo', 'Aucun vélo empruntable', 'Choisissez une autre station.') }}
               {% else %}
-                <div class="velo-liste">
-                  {% for v in velos %}
-                    <div class="velo-carte">
-                      <span class="velo-pastille ton-{{ v.type_velo == 'ELECTRIQUE' ? 'accent' : 'primary' }}">
-                        {{ icone(v.type_velo == 'ELECTRIQUE' ? 'eclair' : 'velo', 18) }}</span>
-                      <div>
-                        <strong>Vélo n° {{ v.id_velo }}</strong>
-                        <small>Borne {{ v.numero_borne }}{% if v.niveau_batterie is not null %} · {{ v.niveau_batterie }} %{% endif %}</small>
+                {# un seul formulaire : la case casque vaut pour le vélo choisi (bouton name="velo") #}
+                <form method="post" action="/espace/emprunter" class="pile">
+                  {{ ui.csrf() }}
+                  <label class="case"><input type="checkbox" name="casque" value="1">
+                    Je prends un casque (+ {{ abonnement.supplement_casque|euros }} sur ce trajet)</label>
+                  <div class="velo-liste">
+                    {% for v in velos %}
+                      <div class="velo-carte">
+                        <span class="velo-pastille ton-{{ v.type_velo == 'ELECTRIQUE' ? 'accent' : 'primary' }}">
+                          {{ icone(v.type_velo == 'ELECTRIQUE' ? 'eclair' : 'velo', 18) }}</span>
+                        <div>
+                          <strong>Vélo n° {{ v.id_velo }}</strong>
+                          <small>Borne {{ v.numero_borne }}{% if v.niveau_batterie is not null %} · {{ v.niveau_batterie }} %{% endif %}</small>
+                        </div>
+                        <button class="btn btn-petit" type="submit" name="velo" value="{{ v.id_velo }}">Emprunter</button>
                       </div>
-                      <form method="post" action="/espace/emprunter">
-                        {{ ui.csrf() }}<input type="hidden" name="velo" value="{{ v.id_velo }}">
-                        <button class="btn btn-petit" type="submit">Emprunter</button>
-                      </form>
-                    </div>
-                  {% endfor %}
-                </div>
+                    {% endfor %}
+                  </div>
+                </form>
               {% endif %}
             {% endif %}
           </div>
@@ -131,7 +134,7 @@
         <div class="carte-entete"><h2>Mon abonnement</h2></div>
         {% if abonnement %}
           <div class="carte-corps">
-            <div class="ligne entre"><strong style="font-size: 18px">{{ abonnement.formule|libelle }}</strong>{{ ui.badge(abonnement.statut) }}</div>
+            <div class="ligne entre"><strong style="font-size: 18px">{{ abonnement.formule }}</strong>{{ ui.badge(abonnement.statut) }}</div>
             <dl class="liste-def" style="margin-top: 14px">
               <dt>Valable du</dt><dd>{{ abonnement.date_debut|jour }}</dd>
               <dt>Jusqu'au</dt><dd>{{ abonnement.date_fin|jour }}</dd>

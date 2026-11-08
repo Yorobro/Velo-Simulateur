@@ -15,7 +15,7 @@ final class PdoAbonnementRepository implements AbonnementRepository
     public function actif(int $utilisateur): ?array
     {
         return $this->db->ligne(
-            'SELECT v.*, f.duree_gratuite_min, f.prix_tranche, f.duree_tranche_min
+            'SELECT v.*, f.duree_gratuite_min, f.prix_tranche, f.duree_tranche_min, f.supplement_casque
                FROM v_abonnement v
                JOIN abonnement a ON a.id_abonnement = v.id_abonnement
                JOIN formule f ON f.id_formule = a.id_formule
@@ -28,7 +28,7 @@ final class PdoAbonnementRepository implements AbonnementRepository
     public function duUtilisateur(int $utilisateur): array
     {
         return $this->db->lignes(
-            'SELECT v.*, f.prix
+            'SELECT v.*, f.prix, f.duree_validite_jours
                FROM v_abonnement v
                JOIN abonnement a ON a.id_abonnement = v.id_abonnement
                JOIN formule f ON f.id_formule = a.id_formule

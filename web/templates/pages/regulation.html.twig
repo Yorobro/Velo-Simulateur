@@ -5,8 +5,14 @@
 {% block sous_titre %}<div class="sous-titre">Rééquilibrage des stations et tournées</div>{% endblock %}
 {% block actions %}
   {% if not tournee %}
-    <form method="post" action="/regulation/tournees">{{ ui.csrf() }}
-      <button class="btn" type="submit">{{ icone('lecture', 16) }} Démarrer une tournée</button></form>
+    <form class="ligne" method="post" action="/regulation/tournees">{{ ui.csrf() }}
+      <select class="champ" name="vehicule" required aria-label="Véhicule de la tournée" {{ vehicules is empty ? 'disabled' }}>
+        <option value="">{{ vehicules is empty ? 'Aucun véhicule libre' : 'Choisir un véhicule…' }}</option>
+        {% for v in vehicules %}
+          <option value="{{ v.id_vehicule }}">{{ v.immatriculation }} — {{ v.capacite }} vélos</option>
+        {% endfor %}
+      </select>
+      <button class="btn" type="submit" {{ vehicules is empty ? 'disabled' }}>{{ icone('lecture', 16) }} Démarrer une tournée</button></form>
   {% endif %}
 {% endblock %}
 
@@ -22,14 +28,15 @@
   {% if tournee %}
     {% set a_bord = transferts|filter(t => t.date_heure_arrivee is null) %}
     {% set deposes = transferts|filter(t => t.date_heure_arrivee is not null) %}
+    {% set plein = a_bord|length >= tournee.capacite %}
     <div class="carte carte-mise-en-avant">
       <div class="carte-entete">
         <span class="kpi-icone ton-primary">{{ icone('camion', 20) }}</span>
         <div><h2>Tournée n° {{ tournee.id_tournee }} en cours</h2>
-          <p>Démarrée le {{ tournee.date_heure_debut|date_fr }} · {{ a_bord|length }} vélo{{ a_bord|length > 1 ? 's' }} à bord · {{ deposes|length }} déposé{{ deposes|length > 1 ? 's' }}</p></div>
+          <p>Démarrée le {{ tournee.date_heure_debut|date_fr }} · véhicule {{ tournee.immatriculation }} · {{ a_bord|length }} / {{ tournee.capacite }} vélos à bord · {{ deposes|length }} déposé{{ deposes|length > 1 ? 's' }}</p></div>
         <div class="actions">
           <form method="post" action="/regulation/tournees/{{ tournee.id_tournee }}/cloturer" data-confirmer="Clôturer la tournée ?">
-            {{ ui.csrf() }}<button class="btn btn-secondaire" type="submit" {{ a_bord is not empty or transferts is empty ? 'disabled' }}>
+            {{ ui.csrf() }}<button class="btn btn-secondaire" type="submit" {{ a_bord is not empty ? 'disabled' }}>
               {{ icone('stop', 16) }} Clôturer</button></form>
         </div>
       </div>
@@ -44,7 +51,8 @@
               {% endfor %}
             </select>
           </form>
-          {% if station_choisie %}
+          {% if plein %}<p class="muted">Véhicule plein : déposez un vélo avant d'en charger un autre.</p>{% endif %}
+          {% if station_choisie and not plein %}
             {% if velos is empty %}<p class="muted">Aucun vélo disponible dans cette station.</p>{% endif %}
             <div class="velo-liste">
               {% for v in velos %}
@@ -136,7 +144,7 @@
             <tbody>
             {% for t in recentes %}
               <tr>
-                <td><span class="titre-cellule">n° {{ t.id_tournee }}</span><span class="sous">{{ t.operateur }} · {{ t.date_heure_debut|date_fr }}</span></td>
+                <td><span class="titre-cellule">n° {{ t.id_tournee }}</span><span class="sous">{{ t.operateur }} · {{ t.immatriculation }} · {{ t.date_heure_debut|date_fr }}</span></td>
                 <td class="num">{{ t.nb_velos }} vélo{{ t.nb_velos > 1 ? 's' }}</td>
                 <td>{{ t.date_heure_fin ? ui.badge('TERMINEE') : ui.badge('EN_COURS') }}</td>
               </tr>

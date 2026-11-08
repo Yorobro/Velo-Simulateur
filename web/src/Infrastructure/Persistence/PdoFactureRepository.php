@@ -12,7 +12,7 @@ final class PdoFactureRepository implements FactureRepository
     /** Factures d'un usager : souscriptions et trajets (deux requêtes indexées réunies). */
     private const FACTURES = '
         SELECT f.id_facture, f.date_emission, f.montant, f.date_reglement,
-               \'ABONNEMENT\' AS objet, fo.type AS detail
+               \'ABONNEMENT\' AS objet, fo.libelle AS detail
           FROM facture f
           JOIN abonnement a ON a.id_abonnement = f.id_abonnement
           JOIN formule fo   ON fo.id_formule = a.id_formule
@@ -44,7 +44,7 @@ final class PdoFactureRepository implements FactureRepository
     {
         $ligne = $this->db->ligne(
             'SELECT COUNT(*) AS nb, COALESCE(SUM(montant), 0) AS montant
-               FROM (' . self::FACTURES . ') t WHERE date_reglement IS NULL',
+               FROM (' . self::FACTURES . ') t WHERE date_reglement IS NULL AND montant > 0',
             [$utilisateur, $utilisateur],
         ) ?? [];
 

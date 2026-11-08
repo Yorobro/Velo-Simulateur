@@ -4,10 +4,12 @@
 --  À exécuter après structure.sql. MySQL 8.4 LTS / 9.x.
 --  Période simulée : septembre à novembre 2026 (dernières données : 4 novembre).
 --  Les données respectent les règles du sujet, y compris celles qui seront
---  imposées plus tard par triggers (voir la fin de structure.sql) :
+--  imposées plus tard par triggers (R1 à R21, voir la fin de structure.sql) :
 --  un vélo à un seul endroit, une borne = un vélo, une location à la fois,
---  abonnement valide, pas d'emprunt d'un vélo défectueux, montants calculés
---  selon la formule, rôles des opérateurs.
+--  abonnement valide, pas d'emprunt d'un vélo défectueux (un vélo signalé
+--  passe DEFECTUEUX), montants calculés selon la formule (casque compris),
+--  une facture par abonnement et par location terminée (même à 0 €), rôles
+--  des opérateurs, capacité des véhicules.
 --
 --  Mots de passe : les empreintes sont FICTIVES (format bcrypt, mais elles ne
 --  correspondent à aucun mot de passe). Elles seront remplacées par de vraies
@@ -52,11 +54,11 @@ INSERT INTO utilisateur (id_utilisateur, nom, prenom, email, mot_de_passe_hash, 
 -- -----------------------------------------------------------------------------
 --  Formules (4)
 -- -----------------------------------------------------------------------------
-INSERT INTO formule (id_formule, type, prix, duree_validite_jours, duree_gratuite_min, duree_tranche_min, prix_tranche, supplement_electrique, supplement_casque) VALUES
-  (1, 'TICKET_JOURNEE', 5.00, 1, 30, 30, 1.00, 1.00, 1.00),
-  (2, 'MENSUEL', 15.00, 30, 45, 30, 1.00, 0.50, 0.50),
-  (3, 'ANNUEL', 120.00, 365, 45, 30, 0.75, 0.50, 0.50),
-  (4, 'TARIF_REDUIT', 60.00, 365, 45, 30, 0.50, 0.25, 0.25);
+INSERT INTO formule (id_formule, libelle, prix, duree_validite_jours, duree_gratuite_min, duree_tranche_min, prix_tranche, supplement_electrique, supplement_casque) VALUES
+  (1, 'Ticket journée', 5.00, 1, 30, 30, 1.00, 1.00, 1.00),
+  (2, 'Mensuel', 15.00, 30, 45, 30, 1.00, 0.50, 0.50),
+  (3, 'Annuel', 120.00, 365, 45, 30, 0.75, 0.50, 0.50),
+  (4, 'Tarif réduit', 60.00, 365, 45, 30, 0.50, 0.25, 0.25);
 
 -- -----------------------------------------------------------------------------
 --  Abonnements (23) — date_fin = date_debut + durée de validité - 1 jour
@@ -190,7 +192,8 @@ INSERT INTO velo_electrique (id_velo, niveau_batterie) VALUES
   (25, 33);
 
 -- -----------------------------------------------------------------------------
---  Changements d'état (34) — mise en service, pannes, réparations, réforme
+--  Changements d'état (37) — mise en service, signalements (DEFECTUEUX),
+--  réparations, fausse alerte, réforme
 -- -----------------------------------------------------------------------------
 INSERT INTO changement_etat (id_changement, date_heure_changement, etat, id_velo) VALUES
   (1, '2025-03-17 08:30:00', 'EN_SERVICE', 1),
@@ -218,24 +221,35 @@ INSERT INTO changement_etat (id_changement, date_heure_changement, etat, id_velo
   (23, '2025-10-20 09:00:00', 'EN_SERVICE', 23),
   (24, '2025-10-27 09:00:00', 'EN_SERVICE', 24),
   (25, '2025-11-03 09:00:00', 'EN_SERVICE', 25),
-  (26, '2026-10-06 09:30:00', 'DEFECTUEUX', 3),
+  (26, '2026-10-05 19:02:00', 'DEFECTUEUX', 3),   -- signalement S1
   (27, '2026-10-07 14:00:00', 'EN_SERVICE', 3),
-  (28, '2026-10-10 08:15:00', 'DEFECTUEUX', 17),
+  (28, '2026-10-09 18:20:00', 'DEFECTUEUX', 17),  -- signalement S2 (S3 : déjà défectueux)
   (29, '2026-10-13 10:30:00', 'EN_SERVICE', 17),
-  (30, '2026-10-19 10:00:00', 'DEFECTUEUX', 8),
+  (30, '2026-10-19 08:40:00', 'DEFECTUEUX', 8),   -- signalement S5
   (31, '2026-10-19 11:30:00', 'EN_SERVICE', 8),
-  (32, '2026-10-27 09:00:00', 'DEFECTUEUX', 12),
+  (32, '2026-10-26 17:15:00', 'DEFECTUEUX', 12),  -- signalement S8
   (33, '2026-10-28 16:00:00', 'REFORME', 12),
-  (34, '2026-11-03 11:00:00', 'DEFECTUEUX', 22);
+  (34, '2026-11-03 08:50:00', 'DEFECTUEUX', 22),  -- signalement S12
+  (35, '2026-10-21 09:10:00', 'DEFECTUEUX', 20),  -- signalement S7
+  (36, '2026-10-21 15:00:00', 'EN_SERVICE', 20),  -- S7 clos sans intervention (fausse alerte)
+  (37, '2026-11-02 16:30:00', 'DEFECTUEUX', 5);   -- signalement S11, pas encore traité
+
+-- -----------------------------------------------------------------------------
+--  Véhicules de régulation (3) — capacité en nombre de vélos
+-- -----------------------------------------------------------------------------
+INSERT INTO vehicule (id_vehicule, immatriculation, capacite) VALUES
+  (1, 'FG-482-KL', 12),
+  (2, 'HM-157-PZ', 12),
+  (3, 'BV-903-RT', 6);
 
 -- -----------------------------------------------------------------------------
 --  Tournées de rééquilibrage (4)
 -- -----------------------------------------------------------------------------
-INSERT INTO tournee (id_tournee, date_heure_debut, date_heure_fin, id_utilisateur) VALUES
-  (1, '2026-10-06 06:00:00', '2026-10-06 07:30:00', 3),  -- Sophie Petit
-  (2, '2026-10-15 05:45:00', '2026-10-15 07:00:00', 4),  -- Karim Benali
-  (3, '2026-10-23 06:00:00', '2026-10-23 07:15:00', 5),  -- Lucas Moreau
-  (4, '2026-11-04 13:30:00', NULL, 3);  -- Sophie Petit, en cours
+INSERT INTO tournee (id_tournee, date_heure_debut, date_heure_fin, id_utilisateur, id_vehicule) VALUES
+  (1, '2026-10-06 06:00:00', '2026-10-06 07:30:00', 3, 1),  -- Sophie Petit, FG-482-KL
+  (2, '2026-10-15 05:45:00', '2026-10-15 07:00:00', 4, 2),  -- Karim Benali, HM-157-PZ
+  (3, '2026-10-23 06:00:00', '2026-10-23 07:15:00', 5, 3),  -- Lucas Moreau, BV-903-RT
+  (4, '2026-11-04 13:30:00', NULL, 3, 1);  -- Sophie Petit, FG-482-KL, en cours
 
 -- -----------------------------------------------------------------------------
 --  Mouvements (38) — locations, transferts et retraits pour maintenance
@@ -283,31 +297,31 @@ INSERT INTO mouvement (id_mouvement, date_heure_depart, date_heure_arrivee, id_v
 -- -----------------------------------------------------------------------------
 --  Locations (24)
 -- -----------------------------------------------------------------------------
-INSERT INTO location (id_mouvement, id_abonnement) VALUES
-  (1, 1),  -- L1 : Emma Laurent, 18 min
-  (2, 3),  -- L2 : Léo Fontaine, 22 min
-  (3, 5),  -- L3 : Chloé Rousseau, 35 min
-  (4, 8),  -- L4 : Inès Garnier, 52 min
-  (5, 6),  -- L5 : Nathan Mercier, 25 min
-  (10, 11),  -- L6 : Manon Chevalier, 15 min
-  (11, 12),  -- L7 : Gabriel Robin, 40 min
-  (13, 9),  -- L8 : Louis Faure, 95 min, avec casque
-  (14, 13),  -- L9 : Léa Blanc, 12 min
-  (15, 15),  -- L10 : Jade Muller, 28 min
-  (18, 17),  -- L11 : Camille Roux, 20 min
-  (19, 14),  -- L12 : Arthur Guérin, 70 min, avec casque
-  (21, 16),  -- L13 : Raphaël Henry, 33 min
-  (22, 18),  -- L14 : Adam Lefebvre, 48 min
-  (25, 22),  -- L15 : Zoé Marchand, 26 min
-  (26, 10),  -- L16 : Louis Faure, 41 min
-  (27, 23),  -- L17 : Mathis Lopez, 30 min
-  (29, 8),  -- L18 : Inès Garnier, 64 min
-  (30, 3),  -- L19 : Léo Fontaine, 16 min
-  (31, 21),  -- L20 : Enzo Perrin, 22 min
-  (32, 7),  -- L21 : Nathan Mercier, 55 min
-  (33, 20),  -- L22 : Sarah Dupont, 38 min, avec casque
-  (36, 11),  -- L23 : Manon Chevalier, en cours
-  (38, 17);  -- L24 : Camille Roux, en cours
+INSERT INTO location (id_mouvement, avec_casque, id_abonnement) VALUES
+  (1, FALSE, 1),  -- L1 : Emma Laurent, 18 min
+  (2, FALSE, 3),  -- L2 : Léo Fontaine, 22 min
+  (3, FALSE, 5),  -- L3 : Chloé Rousseau, 35 min
+  (4, FALSE, 8),  -- L4 : Inès Garnier, 52 min
+  (5, FALSE, 6),  -- L5 : Nathan Mercier, 25 min
+  (10, FALSE, 11),  -- L6 : Manon Chevalier, 15 min
+  (11, FALSE, 12),  -- L7 : Gabriel Robin, 40 min
+  (13, TRUE, 9),  -- L8 : Louis Faure, 95 min, avec casque
+  (14, FALSE, 13),  -- L9 : Léa Blanc, 12 min
+  (15, FALSE, 15),  -- L10 : Jade Muller, 28 min
+  (18, FALSE, 17),  -- L11 : Camille Roux, 20 min
+  (19, TRUE, 14),  -- L12 : Arthur Guérin, 70 min, avec casque
+  (21, FALSE, 16),  -- L13 : Raphaël Henry, 33 min
+  (22, FALSE, 18),  -- L14 : Adam Lefebvre, 48 min
+  (25, FALSE, 22),  -- L15 : Zoé Marchand, 26 min
+  (26, FALSE, 10),  -- L16 : Louis Faure, 41 min
+  (27, FALSE, 23),  -- L17 : Mathis Lopez, 30 min
+  (29, FALSE, 8),  -- L18 : Inès Garnier, 64 min
+  (30, FALSE, 3),  -- L19 : Léo Fontaine, 16 min
+  (31, FALSE, 21),  -- L20 : Enzo Perrin, 22 min
+  (32, FALSE, 7),  -- L21 : Nathan Mercier, 55 min
+  (33, TRUE, 20),  -- L22 : Sarah Dupont, 38 min, avec casque
+  (36, FALSE, 11),  -- L23 : Manon Chevalier, en cours
+  (38, TRUE, 17);  -- L24 : Camille Roux, en cours, avec casque
 
 -- -----------------------------------------------------------------------------
 --  Transferts (9)
@@ -324,7 +338,8 @@ INSERT INTO transfert (id_mouvement, id_tournee) VALUES
   (37, 4);
 
 -- -----------------------------------------------------------------------------
---  Factures (36) — abonnements et locations payantes (montant = tranches au-delà du temps gratuit + suppléments)
+--  Factures (45) — abonnements et locations terminées (montant = tranches au-delà du temps gratuit + suppléments).
+--  Une location gratuite a aussi sa facture, à 0 €, jamais à régler.
 -- -----------------------------------------------------------------------------
 INSERT INTO facture (id_facture, date_emission, montant, date_reglement, id_abonnement, id_location) VALUES
   (1, '2025-11-01 07:06:00', 120.00, '2025-11-01 07:07:00', 6, NULL),  -- abonnement 6 (ANNUEL)
@@ -362,7 +377,16 @@ INSERT INTO facture (id_facture, date_emission, montant, date_reglement, id_abon
   (33, '2026-11-01 07:07:00', 120.00, NULL, 7, NULL),  -- abonnement 7 (ANNUEL), non réglée
   (34, '2026-11-01 12:15:00', 1.25, '2026-11-01 12:17:00', NULL, 32),  -- L21 : 55 min, 1 tranche(s), vélo électrique
   (35, '2026-11-02 07:20:00', 5.00, '2026-11-02 07:21:00', 20, NULL),  -- abonnement 20 (TICKET_JOURNEE)
-  (36, '2026-11-02 11:23:00', 3.00, NULL, NULL, 33);  -- L22 : 38 min, 1 tranche(s), vélo électrique, casque, non réglée
+  (36, '2026-11-02 11:23:00', 3.00, NULL, NULL, 33),  -- L22 : 38 min, 1 tranche(s), vélo électrique, casque, non réglée
+  (37, '2026-10-01 08:30:00', 0.00, NULL, NULL, 1),  -- L1 : 18 min, gratuit
+  (38, '2026-10-02 18:15:00', 0.00, NULL, NULL, 3),  -- L3 : 35 min, gratuit
+  (39, '2026-10-05 08:15:00', 0.00, NULL, NULL, 5),  -- L5 : 25 min, gratuit
+  (40, '2026-10-12 19:32:00', 0.00, NULL, NULL, 14),  -- L9 : 12 min, gratuit
+  (41, '2026-10-16 12:50:00', 0.00, NULL, NULL, 18),  -- L11 : 20 min, gratuit
+  (42, '2026-10-20 08:48:00', 0.00, NULL, NULL, 21),  -- L13 : 33 min, gratuit
+  (43, '2026-10-27 08:30:00', 0.00, NULL, NULL, 27),  -- L17 : 30 min, gratuit
+  (44, '2026-10-29 18:46:00', 0.00, NULL, NULL, 30),  -- L19 : 16 min, gratuit
+  (45, '2026-10-30 08:02:00', 0.00, NULL, NULL, 31);  -- L20 : 22 min, gratuit
 
 -- -----------------------------------------------------------------------------
 --  Interventions (9)

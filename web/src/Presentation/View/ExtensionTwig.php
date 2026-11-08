@@ -23,8 +23,6 @@ final class ExtensionTwig extends AbstractExtension
         'OUVERT' => 'Ouvert', 'EN_TRAITEMENT' => 'En traitement', 'CLOS' => 'Clos',
         'VIDE' => 'Vide', 'PLEINE' => 'Pleine', 'PRESQUE_VIDE' => 'Presque vide',
         'PRESQUE_PLEINE' => 'Presque pleine', 'EQUILIBREE' => 'Équilibrée',
-        'TICKET_JOURNEE' => 'Ticket journée', 'MENSUEL' => 'Mensuel', 'ANNUEL' => 'Annuel',
-        'TARIF_REDUIT' => 'Tarif réduit',
         'USAGER' => 'Usager', 'OPERATEUR_REGULATION' => 'Opérateur régulation',
         'OPERATEUR_MAINTENANCE' => 'Opérateur maintenance', 'ADMINISTRATEUR' => 'Administrateur',
         'VELO' => 'Vélo', 'STATION' => 'Station', 'ABONNEMENT' => 'Abonnement', 'LOCATION' => 'Location',

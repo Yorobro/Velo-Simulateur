@@ -18,9 +18,9 @@ interface LocationRepository
 
     public function titulaire(int $location): ?int;
 
-    /** Appelle emprunter_velo ; renvoie l'identifiant de la location. */
-    public function emprunter(int $utilisateur, int $velo): int;
+    /** Appelle emprunter_velo (avec ou sans casque) ; renvoie l'identifiant de la location. */
+    public function emprunter(int $utilisateur, int $velo, bool $casque): int;
 
     /** Appelle restituer_velo (borne choisie automatiquement). */
-    public function restituer(int $location, int $station, bool $casque): void;
+    public function restituer(int $location, int $station): void;
 }

@@ -2,7 +2,7 @@
 {% import 'components/ui.html.twig' as ui %}
 
 {% block titre %}Factures{% endblock %}
-{% block sous_titre %}<div class="sous-titre">Souscriptions et trajets payants</div>{% endblock %}
+{% block sous_titre %}<div class="sous-titre">Souscriptions et trajets (un trajet gratuit a une facture à 0 €, rien à payer)</div>{% endblock %}
 
 {% block contenu %}
 <div class="pile">
@@ -26,11 +26,13 @@
               <td class="mono">{{ f.id_facture }}</td>
               <td>{{ f.date_emission|date_fr }}</td>
               <td><span class="titre-cellule">{{ f.objet|libelle }}</span>
-                <span class="sous">{{ f.objet == 'ABONNEMENT' ? f.detail|libelle : f.detail }}</span></td>
+                <span class="sous">{{ f.detail }}</span></td>
               <td class="num"><strong>{{ f.montant|euros }}</strong></td>
-              <td>{% if f.date_reglement %}{{ ui.badge('PAYEE') }} <small>le {{ f.date_reglement|jour }}</small>{% else %}{{ ui.badge('A_PAYER') }}{% endif %}</td>
+              <td>{% if f.montant == 0 %}<span class="badge badge-neutral">Gratuit</span>
+                {% elseif f.date_reglement %}{{ ui.badge('PAYEE') }} <small>le {{ f.date_reglement|jour }}</small>
+                {% else %}{{ ui.badge('A_PAYER') }}{% endif %}</td>
               <td class="actions">
-                {% if f.date_reglement is null %}
+                {% if f.date_reglement is null and f.montant > 0 %}
                   <form method="post" action="/espace/factures/{{ f.id_facture }}/regler"
                         data-confirmer="Régler la facture n° {{ f.id_facture }} ({{ f.montant|euros }}) ?">
                     {{ ui.csrf() }}<button class="btn btn-petit" type="submit">{{ icone('euro', 14) }} Payer</button>

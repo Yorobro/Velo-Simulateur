@@ -35,7 +35,7 @@
 } %}
 {% set graphe_recettes = {
   type: 'bar',
-  data: {labels: recettes|map(r => r.formule|libelle), datasets: [
+  data: {labels: recettes|map(r => r.formule), datasets: [
     {label: 'Abonnements', data: recettes|map(r => r.abonnements + 0), backgroundColor: '#0f766e', borderRadius: 4},
     {label: 'Trajets', data: recettes|map(r => r.locations + 0), backgroundColor: '#f59e0b', borderRadius: 4}]},
   options: {plugins: {legend: {position: 'bottom'}},

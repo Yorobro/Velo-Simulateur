@@ -65,8 +65,7 @@ CREATE TABLE utilisateur (
 
 CREATE TABLE formule (
   id_formule             INT UNSIGNED       NOT NULL AUTO_INCREMENT,
-  type                   ENUM('TICKET_JOURNEE', 'MENSUEL', 'ANNUEL', 'TARIF_REDUIT')
-                                            NOT NULL,
+  libelle                VARCHAR(50)        NOT NULL,
   prix                   DECIMAL(7,2)       NOT NULL,
   duree_validite_jours   SMALLINT UNSIGNED  NOT NULL,
   duree_gratuite_min     SMALLINT UNSIGNED  NOT NULL,
@@ -75,6 +74,10 @@ CREATE TABLE formule (
   supplement_electrique  DECIMAL(5,2)       NOT NULL DEFAULT 0.00,
   supplement_casque      DECIMAL(5,2)       NOT NULL DEFAULT 0.00,
   CONSTRAINT pk_formule PRIMARY KEY (id_formule),
+  -- les formules du sujet (ticket journée, mensuel, annuel, tarif réduit) sont
+  -- des lignes de la table : leur libellé est une clé candidate
+  CONSTRAINT uq_formule_libelle         UNIQUE (libelle),
+  CONSTRAINT ck_formule_libelle         CHECK (CHAR_LENGTH(TRIM(libelle)) > 0),
   CONSTRAINT ck_formule_prix            CHECK (prix >= 0),
   CONSTRAINT ck_formule_validite        CHECK (duree_validite_jours > 0),
   -- duree_gratuite_min peut valoir 0 (aucune minute offerte) : UNSIGNED suffit
@@ -94,7 +97,9 @@ CREATE TABLE abonnement (
   id_formule               INT UNSIGNED  NOT NULL,
   id_abonnement_precedent  INT UNSIGNED  NULL,
   CONSTRAINT pk_abonnement PRIMARY KEY (id_abonnement),
-  -- un abonnement est renouvelé au plus une fois
+  -- un abonnement est renouvelé au plus une fois. (Qu'il ne se renouvelle pas
+  -- lui-même est vérifié par trigger : MySQL refuse un CHECK sur une colonne
+  -- AUTO_INCREMENT.)
   CONSTRAINT uq_abonnement_precedent UNIQUE (id_abonnement_precedent),
   CONSTRAINT ck_abonnement_dates CHECK (date_fin >= date_debut),
   CONSTRAINT fk_abonnement_utilisateur FOREIGN KEY (id_utilisateur)
@@ -191,16 +196,32 @@ CREATE TABLE changement_etat (
   COMMENT = 'Historique des états ; état actuel = dernier changement';
 
 
+CREATE TABLE vehicule (
+  id_vehicule      INT UNSIGNED      NOT NULL AUTO_INCREMENT,
+  immatriculation  VARCHAR(10)       NOT NULL,
+  capacite         TINYINT UNSIGNED  NOT NULL,
+  CONSTRAINT pk_vehicule PRIMARY KEY (id_vehicule),
+  CONSTRAINT uq_vehicule_immatriculation UNIQUE (immatriculation),
+  CONSTRAINT ck_vehicule_immatriculation CHECK (CHAR_LENGTH(TRIM(immatriculation)) > 0),
+  -- nombre de vélos que le véhicule peut transporter à la fois
+  CONSTRAINT ck_vehicule_capacite CHECK (capacite > 0)
+) ENGINE = InnoDB
+  COMMENT = 'Véhicules de régulation utilisés pour les tournées';
+
+
 CREATE TABLE tournee (
   id_tournee        INT UNSIGNED  NOT NULL AUTO_INCREMENT,
   date_heure_debut  DATETIME      NOT NULL,
   date_heure_fin    DATETIME      NULL,
   id_utilisateur    INT UNSIGNED  NOT NULL,
+  id_vehicule       INT UNSIGNED  NOT NULL,
   CONSTRAINT pk_tournee PRIMARY KEY (id_tournee),
   CONSTRAINT ck_tournee_dates
     CHECK (date_heure_fin IS NULL OR date_heure_fin > date_heure_debut),
   CONSTRAINT fk_tournee_utilisateur FOREIGN KEY (id_utilisateur)
-    REFERENCES utilisateur (id_utilisateur)
+    REFERENCES utilisateur (id_utilisateur),
+  CONSTRAINT fk_tournee_vehicule FOREIGN KEY (id_vehicule)
+    REFERENCES vehicule (id_vehicule)
 ) ENGINE = InnoDB
   COMMENT = 'Tournées de rééquilibrage (date_heure_fin NULL = en cours)';
 
@@ -237,6 +258,8 @@ CREATE TABLE mouvement (
 
 CREATE TABLE location (
   id_mouvement   INT UNSIGNED  NOT NULL,
+  -- casque récupéré à l'emprunt (supplément casque de la formule)
+  avec_casque    BOOLEAN       NOT NULL DEFAULT FALSE,
   id_abonnement  INT UNSIGNED  NOT NULL,
   CONSTRAINT pk_location PRIMARY KEY (id_mouvement),
   CONSTRAINT fk_location_mouvement FOREIGN KEY (id_mouvement)
@@ -280,12 +303,15 @@ CREATE TABLE facture (
   CONSTRAINT ck_facture_montant CHECK (montant >= 0),
   CONSTRAINT ck_facture_reglement
     CHECK (date_reglement IS NULL OR date_reglement >= date_emission),
+  -- une facture à 0 € n'est pas à payer (on ne paie que si montant > 0)
+  CONSTRAINT ck_facture_paiement
+    CHECK (date_reglement IS NULL OR montant > 0),
   CONSTRAINT fk_facture_abonnement FOREIGN KEY (id_abonnement)
     REFERENCES abonnement (id_abonnement),
   CONSTRAINT fk_facture_location FOREIGN KEY (id_location)
     REFERENCES location (id_mouvement)
 ) ENGINE = InnoDB
-  COMMENT = 'Factures ; date_reglement NULL = non réglée';
+  COMMENT = 'Factures ; date_reglement NULL = non réglée (ou rien à régler si montant = 0)';
 
 
 -- =============================================================================
@@ -378,9 +404,10 @@ CREATE TABLE intervention_station (
 
 
 -- =============================================================================
---  Règles du sujet et du MLD qui ne peuvent pas s'écrire en contrainte
---  déclarative. Elles seront implémentées par triggers (étape suivante) ;
---  le jeu de données de donnes.sql les respecte déjà.
+--  Règles du sujet et du MLD (V2/mld.md, § 4) qui ne peuvent pas s'écrire en
+--  contrainte déclarative. Elles sont implémentées par les triggers et les
+--  procédures de automatisation.sql ; les jeux de données (donnes.sql,
+--  peuplement_velo.py) les respectent déjà.
 -- =============================================================================
 --  Locations
 --    R1  un usager n'a qu'une location en cours à la fois ;
@@ -389,12 +416,14 @@ CREATE TABLE intervention_station (
 --    R3  un vélo dont le dernier état est DEFECTUEUX ou REFORME ne peut pas
 --        être emprunté ;
 --    R4  durée et coût calculés à la restitution ; facture.montant = coût du
---        trajet (tranches au-delà de la durée gratuite + suppléments).
+--        trajet (tranches au-delà de la durée gratuite + suppléments électrique
+--        et casque).
 --  Flotte
 --    R5  un vélo n'est qu'à un seul endroit : velo.(id_station, numero_borne)
 --        = borne d'arrivée de son dernier mouvement, NULL pendant un mouvement ;
 --    R6  un vélo ne part que de la borne où il se trouve, et n'arrive que sur
---        une borne libre et EN_SERVICE d'une station EN_SERVICE ;
+--        une borne libre et EN_SERVICE d'une station EN_SERVICE ; une location
+--        part d'une borne et d'une station en service ;
 --    R7  un vélo n'a qu'un mouvement en cours à la fois.
 --  Généralisations
 --    R8  un mouvement est une location, un transfert OU le mouvement d'une
@@ -407,10 +436,25 @@ CREATE TABLE intervention_station (
 --    R11 abonnement.date_fin = date_debut + formule.duree_validite_jours - 1 ;
 --        un renouvellement appartient au même usager et commence après la fin
 --        du précédent ;
---    R12 tournée effectuée par un OPERATEUR_REGULATION, intervention réalisée
---        par un OPERATEUR_MAINTENANCE (ou un ADMINISTRATEUR) ;
+--    R12 tournée effectuée par un OPERATEUR_REGULATION ou un ADMINISTRATEUR,
+--        intervention par un OPERATEUR_MAINTENANCE ou un ADMINISTRATEUR ;
+--        seul un USAGER s'abonne et émet un signalement ;
 --    R13 un signalement de vélo et l'intervention qui le traite concernent le
 --        même vélo (via intervention_velo -> mouvement) ;
 --    R14 une intervention commence après le signalement qu'elle traite ;
 --        les transferts d'une tournée ont lieu pendant la tournée.
+--  Régulation
+--    R15 les vélos chargés (transferts en cours) ne dépassent pas la capacité
+--        du véhicule de la tournée ;
+--    R16 un véhicule et un opérateur n'ont qu'une tournée en cours à la fois ;
+--    R17 une tournée n'est clôturée qu'une fois tous ses vélos déposés.
+--  Facturation, maintenance, historisation
+--    R18 tout abonnement a sa facture (créée avec lui) ; toute location
+--        terminée a sa facture, même à 0 € ;
+--    R19 fin d'une intervention sur vélo : EN_SERVICE s'il revient sur une
+--        borne, REFORME sinon ; les signalements traités sont clos ;
+--    R20 mise en service -> premier état EN_SERVICE ; un signalement de vélo
+--        le passe DEFECTUEUX ; un signalement clos sans intervention (fausse
+--        alerte) le remet EN_SERVICE s'il n'en reste pas d'autre ouvert ;
+--    R21 une station a au moins une borne.
 -- =============================================================================

@@ -96,7 +96,7 @@ final class PdoStatistiquesRepository implements StatistiquesRepository
         $date = $depuis->format('Y-m-d H:i:s');
 
         return $this->db->lignes(
-            'SELECT f.id_formule, f.type AS formule,
+            'SELECT f.id_formule, f.libelle AS formule,
                     COALESCE(SUM(r.abonnements), 0) AS abonnements, COALESCE(SUM(r.locations), 0) AS locations,
                     COUNT(r.id_formule) AS factures
                FROM formule f
@@ -109,7 +109,7 @@ final class PdoStatistiquesRepository implements StatistiquesRepository
                             JOIN location l   ON l.id_mouvement = fa.id_location
                             JOIN abonnement a ON a.id_abonnement = l.id_abonnement
                            WHERE fa.date_emission >= ?) r ON r.id_formule = f.id_formule
-              GROUP BY f.id_formule, f.type
+              GROUP BY f.id_formule, f.libelle
               ORDER BY f.id_formule',
             [$date, $date],
         );

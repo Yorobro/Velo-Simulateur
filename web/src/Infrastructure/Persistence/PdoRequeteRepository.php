@@ -55,8 +55,8 @@ final class PdoRequeteRepository implements RequeteRepository
                 'description' => 'Écran des opérateurs de maintenance.',
                 'sql' => 'SELECT * FROM signalement WHERE date_heure_cloture IS NULL ORDER BY date_heure_signalement'],
             'impayees' => ['titre' => 'Factures impayées',
-                'description' => 'Relances (index date_reglement).',
-                'sql' => 'SELECT * FROM facture WHERE date_reglement IS NULL ORDER BY date_emission'],
+                'description' => 'Relances (index date_reglement) ; une facture à 0 € n\'est pas à payer.',
+                'sql' => 'SELECT * FROM facture WHERE date_reglement IS NULL AND montant > 0 ORDER BY date_emission'],
             'trajets_30j' => ['titre' => 'Trajets des 30 derniers jours',
                 'description' => 'Filtre de période sur date_heure_depart.',
                 'sql' => 'SELECT COUNT(*) AS trajets FROM location l JOIN mouvement m ON m.id_mouvement = l.id_mouvement'

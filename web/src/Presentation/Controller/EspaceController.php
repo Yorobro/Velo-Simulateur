@@ -28,15 +28,14 @@ final class EspaceController extends Controleur
 
     public function emprunter(Request $requete): Response
     {
-        $this->espace->emprunter($this->utilisateur()->id, $requete->entier('velo'));
+        $this->espace->emprunter($this->utilisateur()->id, $requete->entier('velo'), $requete->coche('casque'));
 
         return $this->rediriger('/espace', 'Bonne route ! Le vélo est à vous.');
     }
 
     public function restituer(Request $requete): Response
     {
-        $this->espace->restituer($this->utilisateur()->id, $requete->id(), $requete->entier('station'),
-            $requete->coche('casque'));
+        $this->espace->restituer($this->utilisateur()->id, $requete->id(), $requete->entier('station'));
 
         return $this->rediriger('/espace', 'Vélo restitué. Merci !');
     }

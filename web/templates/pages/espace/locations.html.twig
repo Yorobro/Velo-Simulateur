@@ -17,13 +17,13 @@
           <tr>
             <td>{{ l.date_heure_depart|date_fr }}</td>
             <td><div class="etapes">{{ l.station_depart }} <span class="fleche">{{ icone('fleche', 14) }}</span> {{ l.station_arrivee ?? '…' }}</div></td>
-            <td>n° {{ l.id_velo }} {{ ui.type_velo(l.type_velo) }}</td>
-            <td>{{ l.formule|libelle }}</td>
+            <td>n° {{ l.id_velo }} {{ ui.type_velo(l.type_velo) }}{% if l.avec_casque %} <small>+ casque</small>{% endif %}</td>
+            <td>{{ l.formule }}</td>
             <td class="num">{{ l.duree_min|duree }}</td>
             <td class="num">{{ l.montant|euros }}</td>
             <td>
               {% if l.statut == 'EN_COURS' %}{{ ui.badge('EN_COURS') }}
-              {% elseif l.id_facture is null %}<span class="badge badge-neutral">Gratuit</span>
+              {% elseif l.montant == 0 %}<span class="badge badge-neutral">Gratuit</span>
               {% else %}{{ ui.badge(l.date_reglement ? 'PAYEE' : 'A_PAYER') }}{% endif %}
             </td>
           </tr>

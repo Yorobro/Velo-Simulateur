@@ -34,6 +34,7 @@ final class RegulationService
             'tournee' => $tournee,
             'transferts' => $tournee !== null ? $this->regulation->transferts((int) $tournee['id_tournee']) : [],
             'recentes' => $this->regulation->tourneesRecentes(8),
+            'vehicules' => $tournee === null ? $this->regulation->vehiculesLibres() : [],
             'stations_chargement' => $tournee !== null ? $this->stations->avecVelos() : [],
             'stations_depot' => $tournee !== null ? $this->stations->avecPlace() : [],
             'station_choisie' => $station,
@@ -47,9 +48,12 @@ final class RegulationService
         return $this->regulation->stations();
     }
 
-    public function demarrer(Utilisateur $operateur): int
+    /** Démarre une tournée avec le véhicule choisi (UC31). */
+    public function demarrer(Utilisateur $operateur, ?int $vehicule): int
     {
-        return $this->regulation->demarrer($operateur->id);
+        (new Validateur())->requis('vehicule', $vehicule, 'Le véhicule')->verifier();
+
+        return $this->regulation->demarrer($operateur->id, (int) $vehicule);
     }
 
     public function charger(Utilisateur $operateur, int $tournee, ?int $velo): int

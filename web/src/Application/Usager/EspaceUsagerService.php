@@ -47,18 +47,18 @@ final class EspaceUsagerService
         ];
     }
 
-    public function emprunter(int $usager, ?int $velo): int
+    public function emprunter(int $usager, ?int $velo, bool $casque): int
     {
         (new Validateur())->requis('velo', $velo, 'Le vélo')->verifier();
 
-        return $this->locations->emprunter($usager, (int) $velo);
+        return $this->locations->emprunter($usager, (int) $velo, $casque);
     }
 
-    public function restituer(int $usager, int $location, ?int $station, bool $casque): void
+    public function restituer(int $usager, int $location, ?int $station): void
     {
         (new Validateur())->requis('station', $station, 'La station d\'arrivée')->verifier();
         $this->verifierTitulaire($this->locations->titulaire($location), $usager);
-        $this->locations->restituer($location, (int) $station, $casque);
+        $this->locations->restituer($location, (int) $station);
     }
 
     public function historique(int $usager, int $page): Page

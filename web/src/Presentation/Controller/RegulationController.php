@@ -26,7 +26,7 @@ final class RegulationController extends Controleur
 
     public function demarrer(Request $requete): Response
     {
-        $tournee = $this->regulation->demarrer($this->utilisateur());
+        $tournee = $this->regulation->demarrer($this->utilisateur(), $requete->entier('vehicule'));
 
         return $this->rediriger('/regulation', "Tournée n° {$tournee} démarrée.");
     }
