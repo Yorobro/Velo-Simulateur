@@ -10,8 +10,8 @@ Ordre de chargement (MySQL 8.4 LTS ou 9.x) :
 
 1. `data/structure.sql` : tables et contraintes (recrée la base de zéro) ;
 2. `peuplement_velo.py` : données factices en grand volume, générées avec Faker (ou, pour un petit jeu de données écrit à la main, `data/donnes.sql`) ;
-3. `data/automatisation.sql` : fonctions, procédures, triggers, vues ;
-4. `data/optimisation.sql` : index, vues optimisées, statistiques ;
+3. `data/automatisation.sql` : fonctions, procédures, triggers, vues (écrites directement dans leur version optimisée) ;
+4. `data/optimisation.sql` : index et statistiques de l'optimiseur ;
 5. `data/simulation.sql` : événements planifiés qui simulent l'activité du réseau en temps réel (facultatif).
 
 ```bash
@@ -48,13 +48,13 @@ Comptes de démonstration (mot de passe `velo2026`) : `admin@velo.example.org`, 
 
 ## Performances
 
-`performances/banc_performances.py` mesure les 28 requêtes principales (temps médian, lignes lues, plan d'exécution), avant et après `optimisation.sql` ; `performances/sans_optimisation.sql` ramène la base à l'état « avant » pour la comparaison. Résultats et analyse : [`../V2/rapport_performances.md`](../V2/rapport_performances.md).
+`performances/banc_performances.py` mesure les 28 requêtes principales (temps médian, lignes lues, plan d'exécution), avant et après optimisation ; `performances/sans_optimisation.sql` ramène la base à l'état « avant » pour la comparaison (vues de référence, plus lentes, et sans les index d'optimisation). Résultats et analyse : [`../V2/rapport_performances.md`](../V2/rapport_performances.md).
 
 ## Interface web
 
 Le dossier `web/` contient une interface PHP pour exploiter la base : espace usager (emprunt, restitution, abonnements, factures), signalements, régulation, maintenance, statistiques, gestion des stations, des utilisateurs et des formules, et une page **Requêtes** qui exécute et chronomètre les requêtes d'analyse (plus une console SQL en lecture seule).
 
-Elle passe par les procédures stockées et les vues de `data/automatisation.sql` et `data/optimisation.sql` : les quatre scripts doivent donc être chargés au préalable.
+Elle passe par les procédures stockées et les vues de `data/automatisation.sql`, accélérées par les index de `data/optimisation.sql` : les scripts doivent donc être chargés au préalable.
 
 Stack : PHP 8.2+ sans framework, [Twig](https://twig.symfony.com/) pour les gabarits, [FastRoute](https://github.com/nikic/FastRoute) pour le routage, PDO pour la base. Le code suit une architecture en couches (`src/Domain`, `src/Application`, `src/Infrastructure`, `src/Presentation`).
 

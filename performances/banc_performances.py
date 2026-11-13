@@ -5,8 +5,8 @@ Mesure le temps d'exécution des requêtes de l'application (lectures du
 site, statistiques, écritures avec leurs triggers) et relève leur plan
 d'exécution et le nombre de lignes lues par le moteur. Sert au rapport
 V2/rapport_performances.md, dans deux états de la base :
-  - « avant » : automatisation.sql seul (voir performances/sans_optimisation.sql) ;
-  - « apres » : automatisation.sql + optimisation.sql (état normal).
+  - « avant » : vues de référence et sans index d'optimisation (performances/sans_optimisation.sql) ;
+  - « apres » : automatisation.sql (vues optimisées) + optimisation.sql (index) : état normal.
 
 Méthode
   - un passage d'échauffement (données en mémoire), puis N mesures ; on

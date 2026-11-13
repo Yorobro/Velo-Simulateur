@@ -24,7 +24,11 @@
 --                        et calculs automatiques
 --    4. Procédures       une par cas d'utilisation (emprunter_velo, ...)
 --    5. Vues             disponibilité temps réel, régulation, consultation,
---                        statistiques du sujet
+--                        statistiques du sujet. Six d'entre elles sont écrites
+--                        directement dans leur version optimisée (état actuel
+--                        des vélos, locations, statistiques) : elles s'appuient
+--                        sur les index d'optimisation.sql, mais restent justes
+--                        sans eux.
 --
 --  Ce qui est automatique
 --    - position du vélo tenue à jour à chaque départ / arrivée (R5) ;
@@ -1210,13 +1214,28 @@ DELIMITER ;
 -- ---------------------------------------------------------------- flotte
 
 -- État actuel de chaque vélo (dernier changement d'état).
+-- [écriture optimisée ; la version de référence, plus lente, est conservée dans
+--  performances/sans_optimisation.sql pour le rapport de performances]
+-- Utilisée par v_velo et v_disponibilite_station (disponibilité en temps
+-- réel), donc lue en permanence.
+-- Version de référence (lente) : ROW_NUMBER() calculé sur TOUT l'historique
+-- des états à chaque lecture (coût proportionnel à la taille de changement_etat).
+-- Écriture retenue : « dernier élément de chaque groupe » par GROUP BY + MAX().
+-- Avec l'index unique (id_velo, date_heure_changement), le SGBD saute d'un vélo
+-- au suivant dans l'index (« skip scan » / « loose index scan ») et ne lit
+-- qu'une entrée par vélo : coût proportionnel au nombre de vélos.
+-- (Une sous-requête corrélée MAX() ou ORDER BY ... LIMIT 1 ne convient pas :
+-- MySQL y relit tout l'historique du vélo.)
 CREATE VIEW v_etat_actuel_velo AS
-SELECT id_velo, etat, date_heure_changement AS etat_depuis
-  FROM (SELECT id_velo, etat, date_heure_changement,
-               ROW_NUMBER() OVER (PARTITION BY id_velo
-                                  ORDER BY date_heure_changement DESC, id_changement DESC) AS rang
-          FROM changement_etat) e
- WHERE rang = 1;
+SELECT d.id_velo,
+       ce.etat,
+       ce.date_heure_changement AS etat_depuis
+  FROM (SELECT id_velo, MAX(date_heure_changement) AS dernier_changement
+          FROM changement_etat
+         GROUP BY id_velo) d
+  JOIN changement_etat ce
+    ON ce.id_velo = d.id_velo
+   AND ce.date_heure_changement = d.dernier_changement;
 
 -- Fiche de chaque vélo : type, batterie, état et situation actuelle
 -- (sur une borne, en location, en tournée, en atelier ou réformé).
@@ -1321,6 +1340,10 @@ SELECT id_station_source, station_source, id_station_destination, station_destin
 -- ---------------------------------------------------------------- consultation
 
 -- Locations avec durée, statut et montant (coût actuel pour une location en cours).
+-- [écriture optimisée ; la version de référence, plus lente, est conservée dans
+--  performances/sans_optimisation.sql pour le rapport de performances]
+-- La durée est écrite directement plutôt que par fn_duree_minutes() : un appel
+-- de fonction stockée par ligne est coûteux (même résultat).
 CREATE VIEW v_location AS
 SELECT l.id_mouvement AS id_location,
        a.id_utilisateur,
@@ -1337,9 +1360,11 @@ SELECT l.id_mouvement AS id_location,
        sa.nom AS station_arrivee,
        m.date_heure_arrivee,
        IF(m.date_heure_arrivee IS NULL, 'EN_COURS', 'TERMINEE') AS statut,
-       fn_duree_minutes(m.date_heure_depart, COALESCE(m.date_heure_arrivee, NOW())) AS duree_min,
+       CEIL(TIMESTAMPDIFF(SECOND, m.date_heure_depart,
+                          COALESCE(m.date_heure_arrivee, NOW())) / 60) AS duree_min,
        IF(m.date_heure_arrivee IS NULL,
-          fn_cout_trajet(a.id_formule, fn_duree_minutes(m.date_heure_depart, NOW()),
+          fn_cout_trajet(a.id_formule,
+                         CEIL(TIMESTAMPDIFF(SECOND, m.date_heure_depart, NOW()) / 60),
                          ve.id_velo IS NOT NULL, l.avec_casque),
           COALESCE(fa.montant, 0)) AS montant,
        fa.id_facture,
@@ -1405,10 +1430,15 @@ SELECT s.id_signalement,
 -- ---------------------------------------------------------------- statistiques
 
 -- Nombre de trajets (locations) par jour et durée moyenne.
+-- [écriture optimisée ; la version de référence, plus lente, est conservée dans
+--  performances/sans_optimisation.sql pour le rapport de performances]
+-- La durée est écrite directement plutôt que par fn_duree_minutes() : un appel
+-- de fonction stockée par ligne est coûteux (même résultat).
 CREATE VIEW v_stat_trajets_par_jour AS
 SELECT DATE(m.date_heure_depart) AS jour,
        COUNT(*) AS nb_trajets,
-       ROUND(AVG(fn_duree_minutes(m.date_heure_depart, m.date_heure_arrivee)), 1) AS duree_moyenne_min
+       ROUND(AVG(CEIL(TIMESTAMPDIFF(SECOND, m.date_heure_depart, m.date_heure_arrivee) / 60)), 1)
+         AS duree_moyenne_min
   FROM location l
   JOIN mouvement m ON m.id_mouvement = l.id_mouvement
  GROUP BY DATE(m.date_heure_depart);
@@ -1423,19 +1453,31 @@ SELECT HOUR(m.date_heure_depart) AS heure,
  GROUP BY HOUR(m.date_heure_depart);
 
 -- Trajets origine -> destination, du plus fréquent au moins fréquent (rang).
+-- [écriture optimisée ; la version de référence, plus lente, est conservée dans
+--  performances/sans_optimisation.sql pour le rapport de performances]
+-- Version de référence (lente) : jointure aux deux stations pour CHAQUE
+-- trajet, puis regroupement sur les noms.
+-- Écriture retenue : regroupement d'abord sur les identifiants, puis jointure
+-- aux stations pour les seuls couples obtenus.
 CREATE VIEW v_stat_origine_destination AS
-SELECT RANK() OVER (ORDER BY COUNT(*) DESC) AS rang,
-       m.id_station_depart,
+SELECT RANK() OVER (ORDER BY t.nb_trajets DESC) AS rang,
+       t.id_station_depart,
        sd.nom AS station_depart,
-       m.id_station_arrivee,
+       t.id_station_arrivee,
        sa.nom AS station_arrivee,
-       COUNT(*) AS nb_trajets,
-       ROUND(AVG(fn_duree_minutes(m.date_heure_depart, m.date_heure_arrivee)), 1) AS duree_moyenne_min
-  FROM location l
-  JOIN mouvement m  ON m.id_mouvement = l.id_mouvement
-  JOIN station sd   ON sd.id_station = m.id_station_depart
-  JOIN station sa   ON sa.id_station = m.id_station_arrivee
- GROUP BY m.id_station_depart, sd.nom, m.id_station_arrivee, sa.nom;
+       t.nb_trajets,
+       t.duree_moyenne_min
+  FROM (SELECT m.id_station_depart,
+               m.id_station_arrivee,
+               COUNT(*) AS nb_trajets,
+               ROUND(AVG(CEIL(TIMESTAMPDIFF(SECOND, m.date_heure_depart, m.date_heure_arrivee) / 60)), 1)
+                 AS duree_moyenne_min
+          FROM location l
+          JOIN mouvement m ON m.id_mouvement = l.id_mouvement
+         WHERE m.id_station_arrivee IS NOT NULL
+         GROUP BY m.id_station_depart, m.id_station_arrivee) t
+  JOIN station sd ON sd.id_station = t.id_station_depart
+  JOIN station sa ON sa.id_station = t.id_station_arrivee;
 
 -- Recettes par formule : abonnements + locations, facturé et encaissé.
 CREATE VIEW v_stat_recettes_formule AS
@@ -1463,21 +1505,39 @@ SELECT f.id_formule,
 -- Indisponibilité de la flotte, par type et au total (ligne 'TOUS') :
 -- situation actuelle et part du temps passé DEFECTUEUX sur 30 jours
 -- (les vélos réformés sortent de la flotte).
+-- [écriture optimisée ; la version de référence, plus lente, est conservée dans
+--  performances/sans_optimisation.sql pour le rapport de performances]
+-- Version de référence (lente) : LEAD() calculé sur tout l'historique des
+-- états de tous les vélos.
+-- Écriture retenue : seuls les changements des 30 derniers jours, plus l'état
+-- de chaque vélo au début de la fenêtre (dernier changement antérieur, trouvé
+-- par « skip scan » de l'index unique). Même résultat.
 CREATE VIEW v_stat_indisponibilite_flotte AS
-WITH periodes AS (
-  SELECT id_velo, etat, date_heure_changement AS debut,
-         COALESCE(LEAD(date_heure_changement) OVER (PARTITION BY id_velo
-                                                    ORDER BY date_heure_changement, id_changement),
-                  NOW()) AS fin
+WITH changements AS (
+  -- changements survenus dans la fenêtre de 30 jours
+  SELECT id_velo, etat, date_heure_changement AS debut, id_changement
     FROM changement_etat
+   WHERE date_heure_changement >= NOW() - INTERVAL 30 DAY
+  UNION ALL
+  -- état de chaque vélo au début de la fenêtre
+  SELECT ce.id_velo, ce.etat, NOW() - INTERVAL 30 DAY, ce.id_changement
+    FROM (SELECT id_velo, MAX(date_heure_changement) AS dernier_changement
+            FROM changement_etat
+           WHERE date_heure_changement < NOW() - INTERVAL 30 DAY
+           GROUP BY id_velo) d
+    JOIN changement_etat ce
+      ON ce.id_velo = d.id_velo AND ce.date_heure_changement = d.dernier_changement
+), periodes AS (
+  SELECT id_velo, etat,
+         TIMESTAMPDIFF(MINUTE, debut,
+                       COALESCE(LEAD(debut) OVER (PARTITION BY id_velo ORDER BY debut, id_changement),
+                                NOW())) AS duree
+    FROM changements
 ), minutes_30j AS (
   SELECT id_velo,
          SUM(IF(etat = 'DEFECTUEUX', duree, 0)) AS min_defectueux,
          SUM(IF(etat <> 'REFORME', duree, 0))   AS min_flotte
-    FROM (SELECT id_velo, etat,
-                 GREATEST(0, TIMESTAMPDIFF(MINUTE, GREATEST(debut, NOW() - INTERVAL 30 DAY),
-                                           LEAST(fin, NOW()))) AS duree
-            FROM periodes) p
+    FROM periodes
    GROUP BY id_velo
 )
 SELECT COALESCE(v.type_velo, 'TOUS') AS type_velo,
@@ -1497,6 +1557,25 @@ SELECT COALESCE(v.type_velo, 'TOUS') AS type_velo,
 -- derniers jours. Reconstitué depuis l'historique : un vélo occupe une
 -- station de son arrivée à son départ suivant. Mesure à la demi-heure de
 -- chaque tranche ; base = bornes actuellement en service.
+-- [écriture optimisée ; la version de référence, plus lente, est conservée dans
+--  performances/sans_optimisation.sql pour le rapport de performances]
+-- Version de référence (lente) : pour chaque station et chaque instant
+-- (30 j x 24 h), un comptage parmi TOUS les séjours de l'historique, et une
+-- sous-requête par mouvement pour trouver le premier départ de chaque vélo.
+-- Écriture retenue :
+--   - seuls les séjours qui touchent la fenêtre de 30 jours sont gardés ;
+--   - le premier départ de chaque vélo est un MIN() lu dans l'index
+--     (id_velo, date_heure_depart) ;
+--   - seuls les mouvements partis pendant la fenêtre (index sur
+--     date_heure_depart), plus le dernier départ de chaque vélo avant elle,
+--     passent par LEAD() : pas de fenêtre glissante sur tout l'historique ;
+--   - le comptage ne joint plus séjours et instants par intervalle (coût
+--     séjours x instants) : chaque séjour donne +1 au premier instant qui
+--     suit son arrivée et -1 au premier instant qui suit son départ, et le
+--     nombre de vélos présents est la somme cumulée de ces variations
+--     (SUM() OVER), station par station. Coût : séjours + stations x instants.
+-- Sur le jeu par défaut (122 stations, 360 000 mouvements) : 37 s -> 2,7 s,
+-- résultat identique.
 CREATE VIEW v_stat_remplissage_horaire AS
 WITH RECURSIVE jours (jour) AS (
   SELECT CURDATE() - INTERVAL 29 DAY
@@ -1510,48 +1589,69 @@ WITH RECURSIVE jours (jour) AS (
   SELECT TIMESTAMP(j.jour) + INTERVAL h.heure HOUR + INTERVAL 30 MINUTE AS instant, h.heure
     FROM jours j CROSS JOIN heures h
    WHERE TIMESTAMP(j.jour) + INTERVAL h.heure HOUR + INTERVAL 30 MINUTE <= NOW()
+), fenetre AS (
+  -- mouvements utiles : partis pendant la fenêtre, et le dernier départ de
+  -- chaque vélo avant la fenêtre (son arrivée ouvre un séjour en cours au
+  -- début de la fenêtre). Les autres séjours finissent avant : ils ne comptent pas.
+  SELECT m.id_mouvement, m.id_velo, m.date_heure_depart, m.date_heure_arrivee, m.id_station_arrivee
+    FROM mouvement m
+   WHERE m.date_heure_depart >= TIMESTAMP(CURDATE() - INTERVAL 29 DAY)
+  UNION ALL
+  SELECT m.id_mouvement, m.id_velo, m.date_heure_depart, m.date_heure_arrivee, m.id_station_arrivee
+    FROM (SELECT id_velo, MAX(date_heure_depart) AS dernier_depart
+            FROM mouvement
+           WHERE date_heure_depart < TIMESTAMP(CURDATE() - INTERVAL 29 DAY)
+           GROUP BY id_velo) d
+    JOIN mouvement m ON m.id_velo = d.id_velo AND m.date_heure_depart = d.dernier_depart
 ), sejours AS (
-  -- de chaque arrivée sur une borne au départ suivant du même vélo
   SELECT id_station, debut, fin
     FROM (SELECT m.id_station_arrivee AS id_station,
                  m.date_heure_arrivee AS debut,
                  LEAD(m.date_heure_depart) OVER (PARTITION BY m.id_velo
                                                  ORDER BY m.date_heure_depart, m.id_mouvement) AS fin
-            FROM mouvement m) a
+            FROM fenetre m) a
    WHERE id_station IS NOT NULL
+     AND (fin IS NULL OR fin > CURDATE() - INTERVAL 29 DAY)
   UNION ALL
-  -- de la mise en service au premier départ
   SELECT m.id_station_depart, v.date_mise_service, m.date_heure_depart
-    FROM mouvement m
-    JOIN velo v ON v.id_velo = m.id_velo
-   WHERE NOT EXISTS (SELECT 1 FROM mouvement p
-                      WHERE p.id_velo = m.id_velo
-                        AND (p.date_heure_depart < m.date_heure_depart
-                             OR (p.date_heure_depart = m.date_heure_depart
-                                 AND p.id_mouvement < m.id_mouvement)))
+    FROM (SELECT id_velo, MIN(date_heure_depart) AS premier_depart
+            FROM mouvement GROUP BY id_velo) p
+    JOIN mouvement m ON m.id_velo = p.id_velo AND m.date_heure_depart = p.premier_depart
+    JOIN velo v      ON v.id_velo = p.id_velo
+   WHERE p.premier_depart > CURDATE() - INTERVAL 29 DAY
   UNION ALL
-  -- vélos qui n'ont jamais bougé
   SELECT v.id_station, v.date_mise_service, NULL
     FROM velo v
    WHERE v.id_station IS NOT NULL
      AND NOT EXISTS (SELECT 1 FROM mouvement m WHERE m.id_velo = v.id_velo)
-), occupation AS (
+), variations AS (
+  SELECT id_station, debut AS t, 1 AS delta FROM sejours
+  UNION ALL
+  SELECT id_station, fin, -1 FROM sejours WHERE fin IS NOT NULL
+), par_instant AS (
+  SELECT id_station, instant, SUM(delta) AS delta
+    FROM (SELECT id_station, delta,
+                 GREATEST(TIMESTAMP(CURDATE() - INTERVAL 29 DAY) + INTERVAL 30 MINUTE,
+                          IF(t <= CAST(DATE_FORMAT(t, '%Y-%m-%d %H:30:00') AS DATETIME),
+                             CAST(DATE_FORMAT(t, '%Y-%m-%d %H:30:00') AS DATETIME),
+                             CAST(DATE_FORMAT(t, '%Y-%m-%d %H:30:00') AS DATETIME) + INTERVAL 1 HOUR)) AS instant
+            FROM variations) v
+   GROUP BY id_station, instant
+), presences AS (
   SELECT s.id_station, i.heure,
-         (SELECT COUNT(*) FROM sejours se
-           WHERE se.id_station = s.id_station
-             AND se.debut <= i.instant
-             AND (se.fin IS NULL OR se.fin > i.instant)) AS nb_velos
-    FROM instants i
-   CROSS JOIN station s
+         SUM(COALESCE(p.delta, 0)) OVER (PARTITION BY s.id_station ORDER BY i.instant) AS nb_velos
+    FROM station s
+    CROSS JOIN instants i
+    LEFT JOIN par_instant p ON p.id_station = s.id_station AND p.instant = i.instant
    WHERE s.etat = 'EN_SERVICE'
 )
-SELECT o.id_station,
+SELECT s.id_station,
        s.nom,
-       o.heure,
-       ROUND(AVG(o.nb_velos), 2) AS velos_moyens,
-       ROUND(100 * AVG(o.nb_velos) / NULLIF(c.bornes_en_service, 0), 1) AS taux_remplissage_pct
-  FROM occupation o
-  JOIN station s ON s.id_station = o.id_station
+       pr.heure,
+       ROUND(AVG(pr.nb_velos), 2) AS velos_moyens,
+       ROUND(100 * AVG(pr.nb_velos) / NULLIF(c.bornes_en_service, 0), 1) AS taux_remplissage_pct
+  FROM presences pr
+  JOIN station s ON s.id_station = pr.id_station
   JOIN (SELECT id_station, SUM(etat = 'EN_SERVICE') AS bornes_en_service
-          FROM borne GROUP BY id_station) c ON c.id_station = o.id_station
- GROUP BY o.id_station, s.nom, o.heure, c.bornes_en_service;
+          FROM borne GROUP BY id_station) c ON c.id_station = pr.id_station
+ GROUP BY s.id_station, s.nom, pr.heure, c.bornes_en_service;
