@@ -9,6 +9,16 @@ interface AbonnementRepository
     /** @return array<string, mixed>|null */
     public function actif(int $utilisateur): ?array;
 
+    /**
+     * Dernier abonnement en cours ou à venir (celui qui finit le plus tard), ou null.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function dernier(int $utilisateur): ?array;
+
+    /** @return array<string, mixed>|null */
+    public function trouver(int $abonnement): ?array;
+
     /** @return list<array<string, mixed>> */
     public function duUtilisateur(int $utilisateur): array;
 

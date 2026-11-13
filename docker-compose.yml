@@ -4,8 +4,9 @@
 #   docker compose down -v         supprime aussi la base, pour tout régénérer au prochain up
 #
 # Au premier lancement, la base se construit dans l'ordre imposé par les scripts :
-#   db (structure.sql) -> peuplement (peuplement_velo.py) -> automatisation (automatisation.sql
-#   puis optimisation.sql) -> web. Les lancements suivants réutilisent les données du volume.
+#   db (structure.sql) -> peuplement (peuplement_velo.py) -> automatisation (automatisation.sql,
+#   optimisation.sql puis simulation.sql) -> web. Les lancements suivants réutilisent les données
+#   du volume. simulation.sql crée les événements qui font vivre la base en temps réel.
 #
 # Variables facultatives (environnement ou fichier .env) : DB_PASSWORD, mot de passe root
 # (défaut « changeme ») ; PORT_WEB, PORT_PMA, PORT_DB, ports côté hôte (8090, 8091, 3307).
@@ -56,17 +57,18 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-changeme}
     volumes:
       - ./data:/sql:ro
-    # Les deux scripts se rejouent sans risque : ils recréent fonctions, procédures, triggers,
-    # vues et index, ce qui applique aussi leurs modifications à chaque up.
+    # Les trois scripts se rejouent sans risque : ils recréent fonctions, procédures, triggers,
+    # vues, index et événements, ce qui applique aussi leurs modifications à chaque up
+    # (et relance la simulation si elle avait été arrêtée par CALL sim_arreter()).
     entrypoint: ["sh", "-c"]
     command:
       - |
         set -e
-        for f in automatisation optimisation; do
+        for f in automatisation optimisation simulation; do
           echo "Chargement de $$f.sql"
           mysql -h db -u root --password="$$DB_PASSWORD" velo_libre_service < /sql/$$f.sql
         done
-        echo "Base prête."
+        echo "Base prête, simulation d'activité lancée."
 
   web:
     build: ./web

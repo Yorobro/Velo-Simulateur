@@ -54,16 +54,28 @@ final class EspaceController extends Controleur
 
     public function souscrire(Request $requete): Response
     {
-        $this->espace->souscrire($this->utilisateur()->id, $requete->entier('formule'));
+        $abonnement = $this->espace->souscrire($this->utilisateur()->id, $requete->entier('formule'));
+        $message = ($abonnement['statut'] ?? '') === 'A_VENIR'
+            ? sprintf('Changement programmé : votre abonnement %s commencera le %s.',
+                      mb_strtolower((string) $abonnement['formule']), self::jour((string) $abonnement['date_debut']))
+            : 'Abonnement souscrit.';
 
-        return $this->rediriger('/espace/abonnements', 'Abonnement souscrit. La facture est disponible dans vos factures.');
+        return $this->rediriger('/espace/abonnements', $message . ' La facture est disponible dans vos factures.');
     }
 
     public function renouveler(Request $requete): Response
     {
-        $this->espace->renouveler($this->utilisateur()->id, $requete->id());
+        $abonnement = $this->espace->renouveler($this->utilisateur()->id, $requete->id());
+        $message = isset($abonnement['date_debut'])
+            ? sprintf('Abonnement renouvelé : la suite commence le %s.', self::jour((string) $abonnement['date_debut']))
+            : 'Abonnement renouvelé.';
 
-        return $this->rediriger('/espace/abonnements', 'Abonnement renouvelé.');
+        return $this->rediriger('/espace/abonnements', $message);
+    }
+
+    private static function jour(string $date): string
+    {
+        return (new \DateTimeImmutable($date))->format('d/m/Y');
     }
 
     public function factures(Request $requete): Response

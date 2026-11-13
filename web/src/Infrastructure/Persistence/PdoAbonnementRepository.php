@@ -25,6 +25,24 @@ final class PdoAbonnementRepository implements AbonnementRepository
         );
     }
 
+    public function dernier(int $utilisateur): ?array
+    {
+        return $this->db->ligne(
+            'SELECT v.*, a.id_formule, f.duree_validite_jours
+               FROM v_abonnement v
+               JOIN abonnement a ON a.id_abonnement = v.id_abonnement
+               JOIN formule f ON f.id_formule = a.id_formule
+              WHERE v.id_utilisateur = ? AND v.statut <> \'EXPIRE\'
+              ORDER BY v.date_fin DESC LIMIT 1',
+            [$utilisateur],
+        );
+    }
+
+    public function trouver(int $abonnement): ?array
+    {
+        return $this->db->ligne('SELECT * FROM v_abonnement WHERE id_abonnement = ?', [$abonnement]);
+    }
+
     public function duUtilisateur(int $utilisateur): array
     {
         return $this->db->lignes(

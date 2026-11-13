@@ -12,15 +12,28 @@
         ({{ actif.jours_restants }} jour{{ actif.jours_restants > 1 ? 's' }} restant{{ actif.jours_restants > 1 ? 's' }}).</div>
     </div>
   {% endif %}
+  {% if dernier and dernier.statut == 'A_VENIR' %}
+    <div class="alerte alerte-info">{{ icone('ticket') }}
+      <div><strong>Prochain abonnement : {{ dernier.formule|lower }}</strong>, du {{ dernier.date_debut|jour }}
+        au {{ dernier.date_fin|jour }}.</div>
+    </div>
+  {% endif %}
 
   <div class="carte">
-    <div class="carte-entete"><div><h2>Nos formules</h2><p>La souscription crée la facture correspondante.</p></div></div>
+    <div class="carte-entete"><div><h2>Nos formules</h2>
+      <p>La souscription crée la facture correspondante. Un seul abonnement à la fois :
+        {% if dernier %}une nouvelle formule commencera le <strong>{{ prochain_debut|jour }}</strong>, à la fin de votre
+          {{ dernier.statut == 'A_VENIR' ? 'prochain abonnement' : 'abonnement actuel' }}.
+        {% else %}il commence aujourd'hui.{% endif %}</p></div></div>
     <div class="carte-corps">
       <div class="formules">
         {% for f in formules %}
           {% set populaire = f.libelle == 'Mensuel' %}
+          {% set la_votre = dernier and dernier.id_formule == f.id_formule %}
           <div class="formule{{ populaire ? ' mise-en-avant' }}">
-            <div class="ligne entre"><h3>{{ f.libelle }}</h3>{% if populaire %}<span class="badge badge-primary">Populaire</span>{% endif %}</div>
+            <div class="ligne entre"><h3>{{ f.libelle }}</h3>
+              {% if la_votre %}<span class="badge badge-success">{{ dernier.statut == 'A_VENIR' ? 'Prochaine formule' : 'Votre formule' }}</span>
+              {% elseif populaire %}<span class="badge badge-primary">Populaire</span>{% endif %}</div>
             <div class="prix">{{ f.prix|euros }} <small>/ {{ f.duree_validite_jours == 1 ? 'jour' : f.duree_validite_jours ~ ' jours' }}</small></div>
             <ul>
               <li>{{ icone('ok', 14) }} {{ f.duree_gratuite_min }} min offertes par trajet</li>
@@ -28,11 +41,34 @@
               <li>{{ icone('eclair', 14) }} Électrique : + {{ f.supplement_electrique|euros }} par trajet</li>
               <li>{{ icone('ok', 14) }} Casque : + {{ f.supplement_casque|euros }}</li>
             </ul>
-            <form method="post" action="/espace/abonnements"
-                  data-confirmer="Souscrire la formule {{ f.libelle }} pour {{ f.prix|euros }} ?">
-              {{ ui.csrf() }}<input type="hidden" name="formule" value="{{ f.id_formule }}">
-              <button class="btn btn-bloc{{ populaire ? '' : ' btn-secondaire' }}" type="submit">Souscrire</button>
-            </form>
+            {% if not dernier %}
+              {# aucun abonnement en cours ni à venir : souscription immédiate #}
+              <form method="post" action="/espace/abonnements"
+                    data-confirmer="Souscrire la formule {{ f.libelle }} pour {{ f.prix|euros }} ?">
+                {{ ui.csrf() }}<input type="hidden" name="formule" value="{{ f.id_formule }}">
+                <button class="btn btn-bloc{{ populaire ? '' : ' btn-secondaire' }}" type="submit">Souscrire</button>
+              </form>
+            {% elseif la_votre and f.duree_validite_jours > 1 %}
+              {# même formule : renouvellement du dernier abonnement #}
+              <form method="post" action="/espace/abonnements/{{ dernier.id_abonnement }}/renouveler"
+                    data-confirmer="Renouveler votre abonnement {{ f.libelle|lower }} pour {{ f.prix|euros }} ? Le renouvellement commencera le {{ prochain_debut|jour }}, à la fin de l'abonnement {{ dernier.statut == 'A_VENIR' ? 'programmé' : 'actuel' }}.">
+                {{ ui.csrf() }}<button class="btn btn-bloc" type="submit">Renouveler</button>
+              </form>
+            {% elseif la_votre %}
+              {# ticket journée en cours : un nouveau ticket, pour le jour suivant #}
+              <form method="post" action="/espace/abonnements"
+                    data-confirmer="Prendre un nouveau ticket journée pour {{ f.prix|euros }} ? Il sera valable le {{ prochain_debut|jour }}, après votre ticket actuel.">
+                {{ ui.csrf() }}<input type="hidden" name="formule" value="{{ f.id_formule }}">
+                <button class="btn btn-bloc btn-secondaire" type="submit">Prendre un nouveau ticket</button>
+              </form>
+            {% else %}
+              {# autre formule : changement programmé à la fin de l'abonnement actuel (R22) #}
+              <form method="post" action="/espace/abonnements"
+                    data-confirmer="Changer d'abonnement ?&#10;&#10;Vous avez déjà un abonnement {{ dernier.formule|lower }} {{ dernier.statut == 'A_VENIR' ? 'à venir' : 'en cours' }} jusqu'au {{ dernier.date_fin|jour }}. Un seul abonnement est possible à la fois : la formule {{ f.libelle }} ({{ f.prix|euros }}) commencera le {{ prochain_debut|jour }}.&#10;&#10;Confirmer le changement ?">
+                {{ ui.csrf() }}<input type="hidden" name="formule" value="{{ f.id_formule }}">
+                <button class="btn btn-bloc btn-secondaire" type="submit">Changer pour cette formule</button>
+              </form>
+            {% endif %}
           </div>
         {% endfor %}
       </div>
@@ -58,8 +94,10 @@
               <td class="num">{{ a.prix|euros }}</td>
               <td>{{ ui.badge(a.statut) }}</td>
               <td class="actions">
-                {# une formule d'un jour (ticket) ne se renouvelle pas #}
-                {% if a.id_renouvellement is null and a.duree_validite_jours > 1 and a.statut != 'A_VENIR' %}
+                {# une formule d'un jour (ticket) ne se renouvelle pas ; seul le dernier
+                   abonnement se renouvelle (R22 : pas de chevauchement) #}
+                {% if a.id_renouvellement is null and a.duree_validite_jours > 1 and a.statut != 'A_VENIR'
+                      and (dernier is null or dernier.id_abonnement == a.id_abonnement) %}
                   <form method="post" action="/espace/abonnements/{{ a.id_abonnement }}/renouveler"
                         data-confirmer="Renouveler cet abonnement {{ a.formule|lower }} ?">
                     {{ ui.csrf() }}<button class="btn btn-secondaire btn-petit" type="submit">Renouveler</button>

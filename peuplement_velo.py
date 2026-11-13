@@ -9,7 +9,7 @@ travail), tournées de rééquilibrage, signalements, interventions de
 maintenance, réformes, factures et règlements.
 
 Toutes les règles de la base sont respectées (contraintes de structure.sql et
-règles R1 à R21 tenues ensuite par les triggers) : un vélo à un seul endroit,
+règles R1 à R22 tenues ensuite par les triggers) : un vélo à un seul endroit,
 une borne = un vélo, une location à la fois par usager, abonnement valide,
 pas d'emprunt d'un vélo défectueux (un vélo signalé passe DEFECTUEUX),
 montants calculés selon la formule, une facture par location terminée (même
@@ -81,11 +81,13 @@ FORMULE = {f[0]: f for f in FORMULES}
 ID_FORMULE = {"TICKET_JOURNEE": 1, "MENSUEL": 2, "ANNUEL": 3, "TARIF_REDUIT": 4}
 
 # Véhicules de régulation : immatriculation, capacité (vélos transportés à la fois)
-VEHICULES = [("FG-482-KL", 12), ("HM-157-PZ", 12), ("BV-903-RT", 10), ("KD-318-WX", 14)]
+VEHICULES = [("FG-482-KL", 12), ("HM-157-PZ", 12), ("BV-903-RT", 10), ("KD-318-WX", 14),
+             ("GT-604-NB", 16), ("LC-271-SE", 12), ("MP-835-HA", 10), ("RX-119-JD", 14),
+             ("TB-560-QU", 8), ("ZN-742-FC", 16)]
 
 # commune : (code postal, latitude, longitude du centre, rayon en km)
 COMMUNES = {
-    "Belfort": ("90000", 47.6380, 6.8630, 1.5),
+    "Belfort": ("90000", 47.6380, 6.8630, 2.2),
     "Valdoie": ("90300", 47.6690, 6.8430, 0.5),
     "Offemont": ("90300", 47.6625, 6.8775, 0.5),
     "Cravanche": ("90300", 47.6535, 6.8320, 0.4),
@@ -96,6 +98,31 @@ COMMUNES = {
     "Sevenans": ("90400", 47.5874, 6.8628, 0.3),
     "Trévenans": ("90400", 47.5658, 6.8650, 0.3),
     "Meroux-Moval": ("90400", 47.5865, 6.8990, 0.3),
+    # première et deuxième couronnes du Grand Belfort, sud du Territoire, pays de Montbéliard
+    "Pérouse": ("90160", 47.6370, 6.8980, 0.35),
+    "Bessoncourt": ("90160", 47.6460, 6.9280, 0.35),
+    "Denney": ("90160", 47.6560, 6.9170, 0.3),
+    "Chèvremont": ("90340", 47.6290, 6.9200, 0.35),
+    "Vétrigne": ("90300", 47.6720, 6.9010, 0.3),
+    "Éloie": ("90300", 47.6900, 6.8580, 0.3),
+    "Sermamagny": ("90300", 47.6880, 6.8320, 0.3),
+    "Évette-Salbert": ("90350", 47.6770, 6.7980, 0.4),
+    "Giromagny": ("90200", 47.7420, 6.8270, 0.5),
+    "Lepuix": ("90200", 47.7600, 6.8160, 0.3),
+    "Rougegoutte": ("90200", 47.7330, 6.8530, 0.3),
+    "Botans": ("90400", 47.5970, 6.8460, 0.3),
+    "Dorans": ("90400", 47.5880, 6.8320, 0.3),
+    "Châtenois-les-Forges": ("90700", 47.5600, 6.8440, 0.5),
+    "Bourogne": ("90140", 47.5640, 6.9170, 0.4),
+    "Morvillars": ("90120", 47.5480, 6.9340, 0.3),
+    "Grandvillars": ("90600", 47.5400, 6.9680, 0.5),
+    "Delle": ("90100", 47.5080, 7.0000, 0.7),
+    "Beaucourt": ("90500", 47.4880, 6.9220, 0.6),
+    "Montreux-Château": ("90130", 47.6100, 6.9990, 0.35),
+    "Héricourt": ("70400", 47.5770, 6.7620, 0.8),
+    "Montbéliard": ("25200", 47.5100, 6.7980, 1.0),
+    "Sochaux": ("25600", 47.5080, 6.8270, 0.5),
+    "Audincourt": ("25400", 47.4830, 6.8400, 0.7),
 }
 
 # nom, commune, profil, coordonnées connues (ou None), adresse connue (ou None).
@@ -141,10 +168,97 @@ STATIONS = [
     ("Valdoie Gare", "Valdoie", "residentiel", None, None),
     ("Bavilliers Les Prés", "Bavilliers", "residentiel", None, None),
     ("Danjoutin Bourg", "Danjoutin", "residentiel", None, None),
+    # --- extension du réseau : Belfort
+    ("Porte de Brisach", "Belfort", "loisirs", None, None),
+    ("Tour 41", "Belfort", "loisirs", None, None),
+    ("Place Corbis", "Belfort", "centre", None, None),
+    ("Maison du Peuple", "Belfort", "centre", None, None),
+    ("Théâtre Granit", "Belfort", "centre", None, None),
+    ("Square du Souvenir", "Belfort", "centre", None, None),
+    ("Musée d'Art moderne", "Belfort", "loisirs", None, None),
+    ("Conservatoire", "Belfort", "centre", None, None),
+    ("Préfecture", "Belfort", "travail", None, None),
+    ("Cité administrative", "Belfort", "travail", None, None),
+    ("Palais de justice", "Belfort", "travail", None, None),
+    ("Stade Serzian", "Belfort", "loisirs", None, None),
+    ("Patinoire", "Belfort", "loisirs", None, None),
+    ("Parc des Expositions", "Belfort", "loisirs", None, None),
+    ("La Poudrière", "Belfort", "loisirs", None, None),
+    ("Le Mont", "Belfort", "residentiel", None, None),
+    ("Les Barres", "Belfort", "residentiel", None, None),
+    ("Dardel", "Belfort", "residentiel", None, None),
+    ("Les Résidences", "Belfort", "residentiel", None, None),
+    ("Vauban – Mulhouse", "Belfort", "residentiel", None, None),
+    ("Pont Carnot", "Belfort", "centre", None, None),
+    ("Rue de Strasbourg", "Belfort", "residentiel", None, None),
+    ("Lycée Courbet", "Belfort", "campus", None, None),
+    ("Lycée Diderot", "Belfort", "campus", None, None),
+    ("Collège Châteaudun", "Belfort", "campus", None, None),
+    ("Faculté de droit", "Belfort", "campus", None, None),
+    ("Cité universitaire", "Belfort", "campus", None, None),
+    ("Techn'Hom 3", "Belfort", "travail", None, None),
+    ("Techn'Hom 5", "Belfort", "travail", None, None),
+    ("Gare routière", "Belfort", "gare", None, None),
+    # --- première couronne
+    ("Valdoie Mairie", "Valdoie", "residentiel", None, None),
+    ("Valdoie Les Prés", "Valdoie", "residentiel", None, None),
+    ("Offemont Centre", "Offemont", "residentiel", None, None),
+    ("Offemont Collège", "Offemont", "campus", None, None),
+    ("Cravanche Mairie", "Cravanche", "residentiel", None, None),
+    ("Essert Centre", "Essert", "residentiel", None, None),
+    ("Essert Zone commerciale", "Essert", "travail", None, None),
+    ("Bavilliers Mairie", "Bavilliers", "residentiel", None, None),
+    ("Danjoutin Gare", "Danjoutin", "gare", None, None),
+    ("Andelnans Village", "Andelnans", "residentiel", None, None),
+    ("Pérouse Mairie", "Pérouse", "residentiel", None, None),
+    ("Pérouse Zone d'activités", "Pérouse", "travail", None, None),
+    ("Bessoncourt Centre", "Bessoncourt", "residentiel", None, None),
+    ("Bessoncourt Zone commerciale", "Bessoncourt", "travail", None, None),
+    ("Denney Village", "Denney", "residentiel", None, None),
+    ("Chèvremont Mairie", "Chèvremont", "residentiel", None, None),
+    ("Vétrigne Village", "Vétrigne", "residentiel", None, None),
+    ("Éloie Village", "Éloie", "residentiel", None, None),
+    ("Sermamagny Étang", "Sermamagny", "loisirs", None, None),
+    ("Évette-Salbert Lac du Malsaucy", "Évette-Salbert", "loisirs", None, None),
+    ("Évette-Salbert Mairie", "Évette-Salbert", "residentiel", None, None),
+    ("Botans Village", "Botans", "residentiel", None, None),
+    ("Dorans Village", "Dorans", "residentiel", None, None),
+    ("Sevenans Village", "Sevenans", "residentiel", None, None),
+    ("Trévenans Mairie", "Trévenans", "residentiel", None, None),
+    ("Meroux Village", "Meroux-Moval", "residentiel", None, None),
+    # --- nord du Territoire
+    ("Giromagny Centre", "Giromagny", "centre", None, None),
+    ("Giromagny Collège", "Giromagny", "campus", None, None),
+    ("Lepuix Ballon d'Alsace", "Lepuix", "loisirs", None, None),
+    ("Rougegoutte Mairie", "Rougegoutte", "residentiel", None, None),
+    # --- sud du Territoire
+    ("Châtenois-les-Forges Centre", "Châtenois-les-Forges", "residentiel", None, None),
+    ("Châtenois-les-Forges Canal", "Châtenois-les-Forges", "loisirs", None, None),
+    ("Bourogne Port", "Bourogne", "travail", None, None),
+    ("Bourogne Mairie", "Bourogne", "residentiel", None, None),
+    ("Morvillars Gare", "Morvillars", "gare", None, None),
+    ("Grandvillars Centre", "Grandvillars", "centre", None, None),
+    ("Grandvillars Gare", "Grandvillars", "gare", None, None),
+    ("Delle Gare", "Delle", "gare", None, None),
+    ("Delle Centre", "Delle", "centre", None, None),
+    ("Delle Lycée", "Delle", "campus", None, None),
+    ("Beaucourt Centre", "Beaucourt", "centre", None, None),
+    ("Beaucourt Musée Japy", "Beaucourt", "loisirs", None, None),
+    ("Montreux-Château Gare", "Montreux-Château", "gare", None, None),
+    # --- pays d'Héricourt et de Montbéliard
+    ("Héricourt Gare", "Héricourt", "gare", None, None),
+    ("Héricourt Centre", "Héricourt", "centre", None, None),
+    ("Montbéliard Gare", "Montbéliard", "gare", None, None),
+    ("Montbéliard Château", "Montbéliard", "loisirs", None, None),
+    ("Montbéliard Centre", "Montbéliard", "centre", None, None),
+    ("Montbéliard Université", "Montbéliard", "campus", None, None),
+    ("Sochaux Usine", "Sochaux", "travail", None, None),
+    ("Sochaux Stade Bonal", "Sochaux", "loisirs", None, None),
+    ("Audincourt Centre", "Audincourt", "centre", None, None),
 ]
 FERMEES = {"Hôpital Nord Franche-Comté": "EN_TRAVAUX", "Glacis du Château": "HORS_SERVICE"}
-BORNES_PAR_PROFIL = {"gare": (16, 20), "centre": (12, 16), "campus": (12, 16),
-                     "loisirs": (8, 10), "travail": (8, 12), "residentiel": (8, 12)}
+BORNES_PAR_PROFIL = {"gare": (18, 24), "centre": (14, 18), "campus": (12, 18),
+                     "loisirs": (10, 14), "travail": (10, 14), "residentiel": (10, 14)}
 POPULARITE = {"gare": 3.0, "centre": 2.5, "campus": 2.2, "loisirs": 1.6, "travail": 1.4, "residentiel": 1.0}
 POIDS_DOMICILE = {"residentiel": 4.0, "centre": 1.5, "campus": 1.2, "gare": 0.6, "loisirs": 0.4, "travail": 0.1}
 POIDS_TRAVAIL = {"campus": 3.0, "centre": 2.5, "travail": 2.5, "gare": 2.0, "residentiel": 0.3, "loisirs": 0.3}
@@ -177,13 +291,30 @@ PANNES_VELO = [
     ("Les vitesses ne passent plus.", "Remplacement du câble de dérailleur", False, 0.0),
     ("La roue arrière est voilée.", "Dévoilage de la roue arrière", False, 0.02),
     ("Le cadre est fissuré près du pédalier.", "Expertise du cadre fissuré", False, 0.4),
+    ("La fourche est tordue après un choc.", "Remplacement de la fourche avant", False, 0.15),
+    ("La pédale gauche est cassée.", "Remplacement de la pédale gauche", False, 0.0),
+    ("La pédale droite tourne dans le vide.", "Remplacement du pédalier", False, 0.0),
+    ("La béquille ne tient plus le vélo.", "Remplacement de la béquille", False, 0.0),
+    ("La sonnette est arrachée.", "Remplacement de la sonnette", False, 0.0),
+    ("Le feu arrière ne fonctionne plus.", "Remplacement du feu arrière", False, 0.0),
+    ("Le panier avant est cassé.", "Remplacement du panier avant", False, 0.0),
+    ("La poignée de frein est cassée.", "Remplacement du levier de frein", False, 0.0),
+    ("La chaîne est rouillée et grince.", "Nettoyage et graissage de la transmission", False, 0.0),
+    ("Le vélo a été tagué.", "Nettoyage du cadre", False, 0.0),
+    ("Le vélo a été retrouvé dans la Savoureuse.", "Expertise complète après immersion", False, 0.6),
     ("La batterie se vide en quelques minutes.", "Remplacement de la batterie", True, 0.0),
     ("L'assistance électrique se coupe en route.", "Remplacement du connecteur du moteur", True, 0.05),
     ("L'écran du vélo reste éteint.", "Remplacement de l'afficheur", True, 0.0),
+    ("Le vélo électrique ne se recharge pas sur la borne.", "Remplacement du contact de charge", True, 0.0),
+    ("Le moteur fait un bruit de frottement.", "Remplacement des roulements du moteur", True, 0.03),
+    ("Le capteur de pédalage ne réagit plus.", "Remplacement du capteur de pédalage", True, 0.0),
+    ("La batterie est gonflée.", "Remplacement de la batterie et contrôle du chargeur", True, 0.1),
 ]
 FAUSSES_ALERTES = ["Bruit suspect quand on pédale.", "La selle était mouillée et glissante.",
                    "Le vélo semblait mal accroché à la borne.", "La sonnette ne sonne pas fort.",
-                   "Le panier est un peu tordu."]
+                   "Le panier est un peu tordu.", "Le vélo est sale.", "La selle est trop haute.",
+                   "Les pneus semblent un peu dégonflés.", "Un autocollant est décollé sur le cadre.",
+                   "Le vélo électrique semble moins puissant que d'habitude."]
 PANNES_STATION = [
     ("La borne n°{n} ne libère pas le vélo.", "Remplacement du verrou de la borne n°{n}"),
     ("La borne n°{n} ne détecte pas le vélo restitué.", "Remplacement du capteur de la borne n°{n}"),
@@ -192,6 +323,12 @@ PANNES_STATION = [
     ("L'éclairage de la station est en panne.", "Remplacement des éclairages de la station"),
     ("La station est couverte de tags.", "Nettoyage de la station"),
     ("Le plan du réseau est arraché.", "Remplacement du panneau d'information"),
+    ("La borne n°{n} est tordue.", "Redressage et fixation de la borne n°{n}"),
+    ("La borne n°{n} affiche une erreur.", "Remplacement de la carte électronique de la borne n°{n}"),
+    ("Le terminal de la station ne répond plus.", "Redémarrage et mise à jour du terminal"),
+    ("L'abri de la station a une vitre brisée.", "Remplacement de la vitre de l'abri"),
+    ("La station est inondée après l'orage.", "Pompage et contrôle électrique de la station"),
+    ("Des déchets encombrent la station.", "Nettoyage de la station"),
 ]
 
 COLONNES = {
@@ -323,7 +460,7 @@ class Simulation:
         self.capacite_vehicule = {v[0]: v[2] for v in self.t["vehicule"]}
 
     def creer_stations(self):
-        nb = max(10, min(self.cfg.stations, 200))
+        nb = max(10, min(self.cfg.stations, 300))
         modeles = list(STATIONS)
         while len(modeles) < nb:   # au-delà de la liste : stations de quartier
             modeles.append((f"{self.fake.street_name()}", "Belfort", "residentiel", None, None))
@@ -395,7 +532,7 @@ class Simulation:
         for role, prefixe in comptes_demo:
             ajouter(self.fake.last_name(), self.fake.first_name(), role, date_personnel(),
                     email=f"{prefixe}@velo.example.org")
-        for role, nb in (("ADMINISTRATEUR", 2), ("OPERATEUR_REGULATION", 5), ("OPERATEUR_MAINTENANCE", 5)):
+        for role, nb in (("ADMINISTRATEUR", 3), ("OPERATEUR_REGULATION", 12), ("OPERATEUR_MAINTENANCE", 12)):
             for _ in range(nb):
                 ajouter(self.fake.last_name(), self.fake.first_name(), role, date_personnel(),
                         domaine="velo.example.org")
@@ -569,20 +706,20 @@ class Simulation:
 
     def creer_flotte(self):
         places = sum(len(s["bornes"]) for s in self.actives)
-        total = self.cfg.velos or round(places * 0.55)
+        total = self.cfg.velos or round(places * 0.65)
         total = min(total, places - len(self.actives))
         nouveaux = max(1, total // 12)
         for _ in range(total - nouveaux):
             v = self.nouvel_id("velo")
             service = self.debut - dt.timedelta(days=self.rng.randint(30, 900), hours=self.rng.randint(0, 9))
-            self.mettre_en_service(v, service.replace(hour=max(service.hour, 8), minute=0), self.rng.random() < 0.35)
+            self.mettre_en_service(v, service.replace(hour=max(service.hour, 8), minute=0), self.rng.random() < 0.40)
             sid = self.station_avec_place()
             self.placer(v, sid, self.rng.choice(sorted(self.libres[sid])))
             self.planifier_revisions(v, self.debut + dt.timedelta(days=self.rng.randint(0, 150)))
         for _ in range(nouveaux):   # vélos ajoutés pendant la période
             quand = self.heure_ouvree(self.debut + dt.timedelta(days=self.rng.randint(10, self.cfg.jours - 1),
                                                                 hours=self.rng.randint(8, 16)))
-            self.planifier(quand, "ev_mise_en_service", self.rng.random() < 0.35)
+            self.planifier(quand, "ev_mise_en_service", self.rng.random() < 0.40)
 
     def planifier_revisions(self, v: int, quand: dt.datetime):
         while quand < self.maintenant:
@@ -866,9 +1003,12 @@ class Simulation:
     def planifier_tournees(self):
         jour = self.jour_debut
         while jour <= self.aujourdhui:
-            creneaux = [(10, 30), (15, 0), (20, 30)] + ([(6, 30)] if jour.weekday() < 5 else [])
+            creneaux = [(10, 30), (12, 30), (15, 0), (18, 0), (20, 30)]
+            creneaux += [(6, 30), (8, 30)] if jour.weekday() < 5 else []
             for (h, m) in creneaux:
-                self.planifier(dt.datetime.combine(jour, dt.time(h, m)), "ev_tournee", False)
+                # réseau étendu : plusieurs véhicules partent en même temps
+                for k in range(3):
+                    self.planifier(dt.datetime.combine(jour, dt.time(h, m)) + minutes(5 * k), "ev_tournee", False)
             jour += dt.timedelta(days=1)
         # une tournée en cours à la date courante (démonstration)
         self.planifier(self.maintenant - minutes(25), "ev_tournee", True)
@@ -1054,11 +1194,12 @@ def lire_arguments(argv=None) -> argparse.Namespace:
     g.add_argument("--mot-de-passe", default=os.environ.get("DB_PASSWORD", ""))
     g.add_argument("--base", default=os.environ.get("DB_NAME", "velo_libre_service"))
     v = p.add_argument_group("volumes")
-    v.add_argument("--usagers", type=int, default=3000, help="nombre d'usagers (défaut 3000)")
-    v.add_argument("--stations", type=int, default=40, help="nombre de stations, 10 au minimum (défaut 40)")
-    v.add_argument("--velos", type=int, default=0, help="taille de la flotte (défaut : 55 %% des bornes)")
+    v.add_argument("--usagers", type=int, default=8000, help="nombre d'usagers (défaut 8000)")
+    v.add_argument("--stations", type=int, default=len(STATIONS),
+                   help=f"nombre de stations, de 10 à 300 (défaut {len(STATIONS)} : toutes les stations nommées)")
+    v.add_argument("--velos", type=int, default=0, help="taille de la flotte (défaut : 65 %% des bornes)")
     v.add_argument("--jours", type=int, default=365, help="durée de l'historique en jours (défaut 365)")
-    v.add_argument("--trajets-par-jour", type=int, default=300, help="trajets moyens par jour (défaut 300)")
+    v.add_argument("--trajets-par-jour", type=int, default=900, help="trajets moyens par jour (défaut 900)")
     p.add_argument("--graine", type=int, default=2026, help="graine aléatoire : mêmes données à chaque exécution")
     p.add_argument("--maintenant", type=lambda s: dt.datetime.strptime(s, "%Y-%m-%d %H:%M"),
                    default=dt.datetime.now().replace(second=0, microsecond=0),

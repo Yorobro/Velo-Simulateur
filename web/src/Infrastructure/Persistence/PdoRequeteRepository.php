@@ -55,8 +55,23 @@ final class PdoRequeteRepository implements RequeteRepository
                 'description' => 'Écran des opérateurs de maintenance.',
                 'sql' => 'SELECT * FROM signalement WHERE date_heure_cloture IS NULL ORDER BY date_heure_signalement'],
             'impayees' => ['titre' => 'Factures impayées',
-                'description' => 'Relances (index date_reglement) ; une facture à 0 € n\'est pas à payer.',
+                'description' => 'Relances (index date_reglement, montant) ; une facture à 0 € n\'est pas à payer.',
                 'sql' => 'SELECT * FROM facture WHERE date_reglement IS NULL AND montant > 0 ORDER BY date_emission'],
+            'recherche_station' => ['titre' => 'Recherche de stations',
+                'description' => 'Page Stations : « gare » dans le nom, l\'adresse ou le code postal.',
+                'sql' => 'SELECT d.*, s.adresse, s.code_postal FROM v_disponibilite_station d'
+                    . ' JOIN station s ON s.id_station = d.id_station'
+                    . ' WHERE s.nom LIKE \'%gare%\' OR s.adresse LIKE \'%gare%\' OR s.code_postal LIKE \'%gare%\''
+                    . ' ORDER BY s.nom'],
+            'recherche_utilisateur' => ['titre' => 'Recherche d\'utilisateurs',
+                'description' => 'Page Utilisateurs : « martin » dans le nom, le prénom ou l\'e-mail.',
+                'sql' => 'SELECT id_utilisateur, nom, prenom, email, role FROM utilisateur'
+                    . ' WHERE nom LIKE \'%martin%\' OR prenom LIKE \'%martin%\' OR email LIKE \'%martin%\''
+                    . ' ORDER BY nom, prenom LIMIT 20'],
+            'locations_station_periode' => ['titre' => 'Trajets d\'une station sur 7 jours',
+                'description' => 'Filtre par station de départ et par période (v_location).',
+                'sql' => 'SELECT * FROM v_location WHERE id_station_depart = 1'
+                    . ' AND date_heure_depart >= NOW() - INTERVAL 7 DAY ORDER BY date_heure_depart DESC'],
             'trajets_30j' => ['titre' => 'Trajets des 30 derniers jours',
                 'description' => 'Filtre de période sur date_heure_depart.',
                 'sql' => 'SELECT COUNT(*) AS trajets FROM location l JOIN mouvement m ON m.id_mouvement = l.id_mouvement'

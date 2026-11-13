@@ -66,29 +66,49 @@ final class EspaceUsagerService
         return $this->locations->historique($usager, $page, 20);
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Un usager n'a qu'un abonnement à la fois (règle R22, vérifiée par la
+     * base) : une nouvelle souscription commence au lendemain de la fin du
+     * dernier abonnement en cours ou à venir. La page l'annonce avant de
+     * confirmer un changement de formule.
+     *
+     * @return array<string, mixed>
+     */
     public function abonnements(int $usager): array
     {
+        $dernier = $this->abonnements->dernier($usager);
+        $prochainDebut = $dernier === null
+            ? new \DateTimeImmutable('today')
+            : (new \DateTimeImmutable((string) $dernier['date_fin']))->modify('+1 day');
+
         return [
             'abonnements' => $this->abonnements->duUtilisateur($usager),
             'actif' => $this->abonnements->actif($usager),
+            'dernier' => $dernier,
+            'prochain_debut' => $prochainDebut->format('Y-m-d'),
             'formules' => $this->abonnements->formules(),
         ];
     }
 
-    public function souscrire(int $usager, ?int $formule): int
+    /** @return array<string, mixed> l'abonnement créé (date de début comprise) */
+    public function souscrire(int $usager, ?int $formule): array
     {
         $ids = array_map(static fn (array $f): int => (int) $f['id_formule'], $this->abonnements->formules());
         (new Validateur())->si(!in_array($formule, $ids, true), 'formule', 'Choisissez une formule.')->verifier();
 
-        return $this->abonnements->souscrire($usager, (int) $formule);
+        $id = $this->abonnements->souscrire($usager, (int) $formule);
+
+        return $this->abonnements->trouver($id) ?? ['id_abonnement' => $id, 'statut' => 'ACTIF'];
     }
 
-    public function renouveler(int $usager, int $abonnement): int
+    /** @return array<string, mixed> le nouvel abonnement */
+    public function renouveler(int $usager, int $abonnement): array
     {
         $this->verifierTitulaire($this->abonnements->titulaire($abonnement), $usager);
 
-        return $this->abonnements->renouveler($abonnement);
+        $id = $this->abonnements->renouveler($abonnement);
+
+        return $this->abonnements->trouver($id) ?? ['id_abonnement' => $id, 'statut' => 'ACTIF'];
     }
 
     public function factures(int $usager, int $page): Page

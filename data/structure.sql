@@ -457,4 +457,10 @@ CREATE TABLE intervention_station (
 --        le passe DEFECTUEUX ; un signalement clos sans intervention (fausse
 --        alerte) le remet EN_SERVICE s'il n'en reste pas d'autre ouvert ;
 --    R21 une station a au moins une borne.
+--  Abonnements
+--    R22 un usager n'a qu'un abonnement à la fois : les périodes
+--        [date_debut, date_fin] de ses abonnements ne se chevauchent pas.
+--        Renouveler reste possible (le renouvellement commence après la fin
+--        du précédent) ; changer de formule programme le nouvel abonnement
+--        au lendemain de la fin de l'actuel.
 -- =============================================================================

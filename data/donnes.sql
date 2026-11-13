@@ -4,7 +4,7 @@
 --  À exécuter après structure.sql. MySQL 8.4 LTS / 9.x.
 --  Période simulée : septembre à novembre 2026 (dernières données : 4 novembre).
 --  Les données respectent les règles du sujet, y compris celles qui seront
---  imposées plus tard par triggers (R1 à R21, voir la fin de structure.sql) :
+--  imposées plus tard par triggers (R1 à R22, voir la fin de structure.sql) :
 --  un vélo à un seul endroit, une borne = un vélo, une location à la fois,
 --  abonnement valide, pas d'emprunt d'un vélo défectueux (un vélo signalé
 --  passe DEFECTUEUX), montants calculés selon la formule (casque compris),

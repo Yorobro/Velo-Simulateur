@@ -165,7 +165,7 @@ Les 22 associations du MCD donnent 22 clés étrangères, et les 7 sous-classes 
 
 ## 4. Règles métier sur plusieurs tables
 
-Ces règles ne s'écrivent pas en contrainte déclarative. Elles sont garanties par des triggers, ou par les procédures qui réalisent les cas d'utilisation (une procédure par cas, dans une transaction). R1 à R14 reprennent la numérotation de la V1, mise à jour ; R15 à R21 sont nouvelles.
+Ces règles ne s'écrivent pas en contrainte déclarative. Elles sont garanties par des triggers, ou par les procédures qui réalisent les cas d'utilisation (une procédure par cas, dans une transaction). R1 à R14 reprennent la numérotation de la V1, mise à jour ; R15 à R21 sont nouvelles ; R22 a été ajoutée ensuite.
 
 | N° | Règle | Origine | Garantie par |
 |---|---|---|---|
@@ -190,6 +190,7 @@ Ces règles ne s'écrivent pas en contrainte déclarative. Elles sont garanties 
 | R19 | **Cycle de maintenance.** Retirer le vélo (UC22) crée un MOUVEMENT depuis sa borne et l'INTERVENTION_VELO qui y renvoie ; les signalements ouverts du vélo y sont rattachés. La fin de l'intervention conclut la réparation (UC23). Si le mouvement arrive sur une borne (remise en circulation, UC24), un CHANGEMENT_ETAT `EN_SERVICE` est ajouté. S'il se termine sans borne (réforme), c'est un CHANGEMENT_ETAT `REFORME`, et le vélo ne bouge plus. Dans les deux cas, les signalements traités sont clôturés. | Sujet ; UC21 à UC24 | procédures UC22 et UC24 ; triggers sur INTERVENTION_VELO et MOUVEMENT |
 | R20 | **Historisation automatique de l'état.** La mise en service d'un vélo crée son premier CHANGEMENT_ETAT `EN_SERVICE`. Un signalement sur un vélo ajoute un CHANGEMENT_ETAT `DEFECTUEUX`, s'il ne l'est pas déjà. L'état n'est jamais stocké dans VELO. | Sujet (historisation, « vélo signalé défectueux ») ; UC10, UC13, UC41 | triggers sur VELO et SIGNALEMENT_VELO |
 | R21 | Une station a au moins une borne (multiplicité `1..*` de « compose »). | MCD | procédure de création de station (UC40) |
+| R22 | **Un abonnement à la fois.** Les périodes `[date_debut, date_fin]` des abonnements d'un même usager ne se chevauchent pas. Renouveler reste possible : le renouvellement commence après la fin du précédent (R11). Changer de formule programme le nouvel abonnement au lendemain de la fin du dernier abonnement en cours ou à venir, sans écourter l'actuel. | Évolution du cahier des charges ; UC6, UC17 | triggers sur ABONNEMENT ; procédure de souscription (date de début) |
 
 > **Exclusion et existence.** Un trigger peut interdire qu'une ligne appartienne à deux sous-classes à la fois. Il ne peut pas exiger qu'une sous-classe existe, car la ligne mère est insérée avant la ligne fille. L'existence (R8, R9, R10, R18, R21) est donc garantie par les procédures, qui créent les deux lignes dans la même transaction.
 

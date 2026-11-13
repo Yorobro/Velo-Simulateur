@@ -18,8 +18,9 @@
 --    1. Fonctions        fn_etat_velo, fn_abonnement_valide, fn_duree_minutes,
 --                        fn_cout_trajet, fn_cout_location, fn_borne_libre
 --    2. Contrôles        lever_erreur, verifier_borne_accueil,
---                        verifier_mouvement_libre, verifier_traitement
---    3. Triggers         règles R1 à R21 de structure.sql + historisation
+--                        verifier_mouvement_libre, verifier_traitement,
+--                        verifier_abonnement_unique
+--    3. Triggers         règles R1 à R22 de structure.sql + historisation
 --                        et calculs automatiques
 --    4. Procédures       une par cas d'utilisation (emprunter_velo, ...)
 --    5. Vues             disponibilité temps réel, régulation, consultation,
@@ -127,6 +128,7 @@ DROP PROCEDURE IF EXISTS demarrer_intervention_station;
 DROP PROCEDURE IF EXISTS terminer_intervention_station;
 DROP PROCEDURE IF EXISTS enregistrer_arrivee;
 DROP PROCEDURE IF EXISTS verifier_traitement;
+DROP PROCEDURE IF EXISTS verifier_abonnement_unique;
 DROP PROCEDURE IF EXISTS verifier_mouvement_libre;
 DROP PROCEDURE IF EXISTS verifier_borne_accueil;
 DROP PROCEDURE IF EXISTS lever_erreur;
@@ -281,6 +283,25 @@ BEGIN
   END IF;
 END$$
 
+-- R22 : un usager n'a qu'un abonnement à la fois. La période
+-- [p_debut, p_fin] ne doit chevaucher aucun autre abonnement de l'usager
+-- (p_abonnement : l'abonnement modifié, exclu de la comparaison ; NULL à
+-- l'insertion). Un renouvellement commence après la fin du précédent : il
+-- ne chevauche donc jamais celui qu'il renouvelle.
+CREATE PROCEDURE verifier_abonnement_unique(IN p_utilisateur INT UNSIGNED,
+                                            IN p_abonnement INT UNSIGNED,
+                                            IN p_debut DATE,
+                                            IN p_fin DATE)
+BEGIN
+  IF EXISTS (SELECT 1 FROM abonnement
+              WHERE id_utilisateur = p_utilisateur
+                AND NOT (id_abonnement <=> p_abonnement)
+                AND date_debut <= p_fin
+                AND date_fin >= p_debut) THEN
+    CALL lever_erreur('Un usager n''a qu''un abonnement à la fois : cette période chevauche un abonnement existant.');
+  END IF;
+END$$
+
 -- R13 / R14 : un signalement de vélo n'est traité que par une intervention
 -- sur le même vélo, commencée après le signalement.
 CREATE PROCEDURE verifier_traitement(IN p_signalement INT UNSIGNED,
@@ -325,6 +346,7 @@ END$$
 
 -- R11 : date de fin calculée depuis la formule ; seul un usager s'abonne ;
 -- un renouvellement suit l'abonnement précédent du même usager.
+-- R22 : pas de chevauchement avec un autre abonnement de l'usager.
 CREATE TRIGGER trg_abonnement_bi BEFORE INSERT ON abonnement FOR EACH ROW
 BEGIN
   DECLARE v_utilisateur_prec INT UNSIGNED;
@@ -344,6 +366,7 @@ BEGIN
       CALL lever_erreur('Le renouvellement doit commencer après la fin de l''abonnement précédent.');
     END IF;
   END IF;
+  CALL verifier_abonnement_unique(NEW.id_utilisateur, NULL, NEW.date_debut, NEW.date_fin);
 END$$
 
 -- Facturation automatique de la souscription (prix de la formule).
@@ -363,6 +386,7 @@ BEGIN
   END IF;
   SET NEW.date_fin = NEW.date_debut + INTERVAL
       ((SELECT duree_validite_jours FROM formule WHERE id_formule = NEW.id_formule) - 1) DAY;
+  CALL verifier_abonnement_unique(NEW.id_utilisateur, NEW.id_abonnement, NEW.date_debut, NEW.date_fin);
 END$$
 
 -- ---------------------------------------------------------------- facture
@@ -839,18 +863,32 @@ END$$
 
 -- ---------------------------------------------------------------- abonnements
 
--- Souscrire un abonnement (p_date_debut NULL = aujourd'hui). La date de fin
--- et la facture sont produites par les triggers.
+-- Souscrire un abonnement. La date de fin et la facture sont produites par
+-- les triggers. p_date_debut NULL = au plus tôt : aujourd'hui, ou, si
+-- l'usager a déjà un abonnement en cours ou à venir, le lendemain de la fin
+-- du dernier (R22 : changer de formule programme le nouvel abonnement à la
+-- suite de l'actuel, sans l'écourter). Une date imposée qui chevauche un
+-- abonnement existant est refusée par le trigger.
 CREATE PROCEDURE souscrire_abonnement(IN p_utilisateur INT UNSIGNED,
                                       IN p_formule INT UNSIGNED,
                                       IN p_date_debut DATE,
                                       OUT p_abonnement INT UNSIGNED)
 BEGIN
+  DECLARE v_debut DATE;
+  DECLARE v_verrou INT UNSIGNED;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
   START TRANSACTION;
+  -- verrou sur l'usager : deux souscriptions simultanées ne passent pas toutes
+  -- les deux le contrôle de chevauchement (R22)
+  SELECT id_utilisateur INTO v_verrou FROM utilisateur
+   WHERE id_utilisateur = p_utilisateur FOR UPDATE;
+  SET v_debut = COALESCE(p_date_debut,
+                         GREATEST(CURDATE(),
+                                  COALESCE((SELECT MAX(date_fin) FROM abonnement
+                                             WHERE id_utilisateur = p_utilisateur)
+                                           + INTERVAL 1 DAY, CURDATE())));
   INSERT INTO abonnement (date_debut, date_fin, id_utilisateur, id_formule)
-  VALUES (COALESCE(p_date_debut, CURDATE()), COALESCE(p_date_debut, CURDATE()),
-          p_utilisateur, p_formule);
+  VALUES (v_debut, v_debut, p_utilisateur, p_formule);
   SET p_abonnement = LAST_INSERT_ID();
   COMMIT;
 END$$
@@ -871,6 +909,13 @@ BEGIN
     CALL lever_erreur('Abonnement inconnu.');
   ELSEIF EXISTS (SELECT 1 FROM abonnement WHERE id_abonnement_precedent = p_abonnement) THEN
     CALL lever_erreur('Cet abonnement a déjà été renouvelé.');
+  END IF;
+  -- verrou sur l'usager (R22, comme pour une souscription)
+  SELECT id_utilisateur INTO v_utilisateur FROM utilisateur
+   WHERE id_utilisateur = v_utilisateur FOR UPDATE;
+  IF EXISTS (SELECT 1 FROM abonnement
+              WHERE id_utilisateur = v_utilisateur AND date_debut >= v_debut) THEN
+    CALL lever_erreur('Un autre abonnement est déjà programmé après celui-ci.');
   END IF;
   INSERT INTO abonnement (date_debut, date_fin, id_utilisateur, id_formule, id_abonnement_precedent)
   VALUES (v_debut, v_debut, v_utilisateur, v_formule, p_abonnement);

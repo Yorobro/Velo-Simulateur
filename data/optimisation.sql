@@ -141,9 +141,16 @@ CALL opt_supprimer_index('abonnement', 'fk_abonnement_utilisateur');
 -- Recettes par période (statistiques, rapports) :
 --   WHERE date_emission BETWEEN ? AND ?
 CALL opt_creer_index('facture', 'idx_facture_emission', 'date_emission');
--- Factures impayées (relances, tableau de bord administrateur) :
---   WHERE date_reglement IS NULL
-CALL opt_creer_index('facture', 'idx_facture_reglement', 'date_reglement');
+-- Factures à régler (relances, tableau de bord administrateur) :
+--   WHERE date_reglement IS NULL AND montant > 0
+-- Composite : la plupart des factures non réglées sont des trajets à 0 €
+-- (rien à payer). Un index sur date_reglement seul les ramènerait toutes
+-- (84 500 lignes sur le jeu par défaut, plus lent qu'un parcours de la
+-- table) ; avec montant, seules les 2 600 factures à payer sont lues
+-- (rapport de performances : 274 ms -> 18 ms). Il sert aussi les filtres
+-- sur date_reglement seule. Remplace l'ancien idx_facture_reglement.
+CALL opt_creer_index('facture', 'idx_facture_a_regler', 'date_reglement, montant');
+CALL opt_supprimer_index('facture', 'idx_facture_reglement');
 
 -- ---------------------------------------------------------------- signalement
 -- Signalements ouverts, du plus ancien au plus récent (écran des opérateurs) :
@@ -337,9 +344,16 @@ SELECT COALESCE(v.type_velo, 'TOUS') AS type_velo,
 --   - seuls les séjours qui touchent la fenêtre de 30 jours sont gardés ;
 --   - le premier départ de chaque vélo est un MIN() lu dans l'index
 --     (id_velo, date_heure_depart) ;
---   - le comptage est une seule jointure séjours x instants groupée, au lieu
---     d'une sous-requête par station et par instant (le coût ne dépend plus
---     du nombre de stations).
+--   - seuls les mouvements partis pendant la fenêtre (index sur
+--     date_heure_depart), plus le dernier départ de chaque vélo avant elle,
+--     passent par LEAD() : pas de fenêtre glissante sur tout l'historique ;
+--   - le comptage ne joint plus séjours et instants par intervalle (coût
+--     séjours x instants) : chaque séjour donne +1 au premier instant qui
+--     suit son arrivée et -1 au premier instant qui suit son départ, et le
+--     nombre de vélos présents est la somme cumulée de ces variations
+--     (SUM() OVER), station par station. Coût : séjours + stations x instants.
+--  Sur le jeu par défaut (122 stations, 360 000 mouvements) : 37 s -> 2,7 s,
+--  résultat identique.
 CREATE OR REPLACE VIEW v_stat_remplissage_horaire AS
 WITH RECURSIVE jours (jour) AS (
   SELECT CURDATE() - INTERVAL 29 DAY
@@ -353,18 +367,30 @@ WITH RECURSIVE jours (jour) AS (
   SELECT TIMESTAMP(j.jour) + INTERVAL h.heure HOUR + INTERVAL 30 MINUTE AS instant, h.heure
     FROM jours j CROSS JOIN heures h
    WHERE TIMESTAMP(j.jour) + INTERVAL h.heure HOUR + INTERVAL 30 MINUTE <= NOW()
+), fenetre AS (
+  -- mouvements utiles : partis pendant la fenêtre, et le dernier départ de
+  -- chaque vélo avant la fenêtre (son arrivée ouvre un séjour en cours au
+  -- début de la fenêtre). Les autres séjours finissent avant : ils ne comptent pas.
+  SELECT m.id_mouvement, m.id_velo, m.date_heure_depart, m.date_heure_arrivee, m.id_station_arrivee
+    FROM mouvement m
+   WHERE m.date_heure_depart >= TIMESTAMP(CURDATE() - INTERVAL 29 DAY)
+  UNION ALL
+  SELECT m.id_mouvement, m.id_velo, m.date_heure_depart, m.date_heure_arrivee, m.id_station_arrivee
+    FROM (SELECT id_velo, MAX(date_heure_depart) AS dernier_depart
+            FROM mouvement
+           WHERE date_heure_depart < TIMESTAMP(CURDATE() - INTERVAL 29 DAY)
+           GROUP BY id_velo) d
+    JOIN mouvement m ON m.id_velo = d.id_velo AND m.date_heure_depart = d.dernier_depart
 ), sejours AS (
-  -- de chaque arrivée sur une borne au départ suivant du même vélo
   SELECT id_station, debut, fin
     FROM (SELECT m.id_station_arrivee AS id_station,
                  m.date_heure_arrivee AS debut,
                  LEAD(m.date_heure_depart) OVER (PARTITION BY m.id_velo
                                                  ORDER BY m.date_heure_depart, m.id_mouvement) AS fin
-            FROM mouvement m) a
+            FROM fenetre m) a
    WHERE id_station IS NOT NULL
      AND (fin IS NULL OR fin > CURDATE() - INTERVAL 29 DAY)
   UNION ALL
-  -- de la mise en service au premier départ
   SELECT m.id_station_depart, v.date_mise_service, m.date_heure_depart
     FROM (SELECT id_velo, MIN(date_heure_depart) AS premier_depart
             FROM mouvement GROUP BY id_velo) p
@@ -372,30 +398,41 @@ WITH RECURSIVE jours (jour) AS (
     JOIN velo v      ON v.id_velo = p.id_velo
    WHERE p.premier_depart > CURDATE() - INTERVAL 29 DAY
   UNION ALL
-  -- vélos qui n'ont jamais bougé
   SELECT v.id_station, v.date_mise_service, NULL
     FROM velo v
    WHERE v.id_station IS NOT NULL
      AND NOT EXISTS (SELECT 1 FROM mouvement m WHERE m.id_velo = v.id_velo)
+), variations AS (
+  SELECT id_station, debut AS t, 1 AS delta FROM sejours
+  UNION ALL
+  SELECT id_station, fin, -1 FROM sejours WHERE fin IS NOT NULL
+), par_instant AS (
+  SELECT id_station, instant, SUM(delta) AS delta
+    FROM (SELECT id_station, delta,
+                 GREATEST(TIMESTAMP(CURDATE() - INTERVAL 29 DAY) + INTERVAL 30 MINUTE,
+                          IF(t <= CAST(DATE_FORMAT(t, '%Y-%m-%d %H:30:00') AS DATETIME),
+                             CAST(DATE_FORMAT(t, '%Y-%m-%d %H:30:00') AS DATETIME),
+                             CAST(DATE_FORMAT(t, '%Y-%m-%d %H:30:00') AS DATETIME) + INTERVAL 1 HOUR)) AS instant
+            FROM variations) v
+   GROUP BY id_station, instant
 ), presences AS (
-  SELECT se.id_station, i.instant, COUNT(*) AS nb_velos
-    FROM sejours se
-    JOIN instants i ON i.instant >= se.debut AND (se.fin IS NULL OR i.instant < se.fin)
-   GROUP BY se.id_station, i.instant
+  SELECT s.id_station, i.heure,
+         SUM(COALESCE(p.delta, 0)) OVER (PARTITION BY s.id_station ORDER BY i.instant) AS nb_velos
+    FROM station s
+    CROSS JOIN instants i
+    LEFT JOIN par_instant p ON p.id_station = s.id_station AND p.instant = i.instant
+   WHERE s.etat = 'EN_SERVICE'
 )
 SELECT s.id_station,
        s.nom,
-       i.heure,
-       ROUND(AVG(COALESCE(p.nb_velos, 0)), 2) AS velos_moyens,
-       ROUND(100 * AVG(COALESCE(p.nb_velos, 0)) / NULLIF(c.bornes_en_service, 0), 1)
-         AS taux_remplissage_pct
-  FROM station s
-  CROSS JOIN instants i
+       pr.heure,
+       ROUND(AVG(pr.nb_velos), 2) AS velos_moyens,
+       ROUND(100 * AVG(pr.nb_velos) / NULLIF(c.bornes_en_service, 0), 1) AS taux_remplissage_pct
+  FROM presences pr
+  JOIN station s ON s.id_station = pr.id_station
   JOIN (SELECT id_station, SUM(etat = 'EN_SERVICE') AS bornes_en_service
-          FROM borne GROUP BY id_station) c ON c.id_station = s.id_station
-  LEFT JOIN presences p ON p.id_station = s.id_station AND p.instant = i.instant
- WHERE s.etat = 'EN_SERVICE'
- GROUP BY s.id_station, s.nom, i.heure, c.bornes_en_service;
+          FROM borne GROUP BY id_station) c ON c.id_station = pr.id_station
+ GROUP BY s.id_station, s.nom, pr.heure, c.bornes_en_service;
 
 
 -- =============================================================================
