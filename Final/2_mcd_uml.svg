@@ -1,0 +1,287 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2830" height="1250" viewBox="0 0 2830 1250" font-family="Arial, Helvetica, sans-serif">
+<title>MCD (UML) — Réseau de vélos en libre-service (V2)</title>
+<defs><marker id="tri" viewBox="0 0 18 18" refX="17" refY="9" markerWidth="18" markerHeight="18" markerUnits="userSpaceOnUse" orient="auto">
+<path d="M1,1 L17,9 L1,17 z" fill="#fff" stroke="#000" stroke-width="1.2"/></marker></defs>
+<rect width="2830" height="1250" fill="#fff"/>
+<rect x="10" y="10" width="2810" height="1230" fill="none" stroke="#000" stroke-width="1.2"/>
+<text x="24" y="34" font-size="15" font-weight="bold">MCD — Réseau de vélos en libre-service (V2, diagramme de classes UML)</text>
+<line x1="1908.5" y1="140" x2="1908.5" y2="300" stroke="#000" stroke-width="1.2" marker-end="url(#tri)"/>
+<line x1="1212.0" y1="290" x2="1212.0" y2="172" stroke="#000" stroke-width="1.2" marker-end="url(#tri)"/>
+<polyline points="1001.0,330.0 1001.0,290.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1212.0,330.0 1212.0,290.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1001.0,290.0 1212.0,290.0" fill="none" stroke="#000" stroke-width="1.2" />
+<line x1="1538.5" y1="700" x2="1538.5" y2="626" stroke="#000" stroke-width="1.2" marker-end="url(#tri)"/>
+<polyline points="1450.0,740.0 1450.0,700.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1692.0,740.0 1692.0,700.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1450.0,700.0 1692.0,700.0" fill="none" stroke="#000" stroke-width="1.2" />
+<line x1="1060" y1="1150" x2="698" y2="1150" stroke="#000" stroke-width="1.2" marker-end="url(#tri)"/>
+<polyline points="1300.0,1023.0 1060.0,1023.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1300.0,1173.0 1060.0,1173.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1060.0,1023.0 1060.0,1173.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="530.0,800.0 530.0,642.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="450.0,600.0 254.0,600.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="600.0,642.0 600.0,690.0 704.0,690.0 704.0,625.0 614.0,625.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1000.0,380.0 1000.0,590.0 614.0,590.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="530.0,560.0 530.0,398.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="925.0,355.0 632.0,355.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="2240.0,656.0 1941.0,656.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1880.0,366.0 1880.0,620.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="2019.0,336.0 2200.0,336.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1328.0,100.0 1785.0,100.0 1785.0,326.0 1820.0,326.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1328.0,130.0 1730.0,130.0 1730.0,646.0 1820.0,646.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1328.0,160.0 1675.0,160.0 1675.0,672.0 1820.0,672.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1212.0,356.0 1212.0,820.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1080.0,866.0 641.0,866.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1150.0,902.0 1150.0,991.0 939.0,991.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="530.0,962.0 530.0,1090.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1465.0,1024.0 1995.0,1024.0 1995.0,366.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1491.0,1174.0 2335.0,1174.0 2335.0,736.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1450.0,600.0 1300.0,600.0 1300.0,760.0 610.0,760.0 610.0,800.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1380.0,740.0 1380.0,240.0 1320.0,240.0 1320.0,172.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1420.0,766.0 1420.0,1010.0" fill="none" stroke="#000" stroke-width="1.2" />
+<polyline points="1700.0,806.0 1700.0,1100.0 1420.0,1100.0 1420.0,1160.0" fill="none" stroke="#000" stroke-width="1.2" />
+<line x1="880" y1="194" x2="1100" y2="290" stroke="#000" stroke-width="1" stroke-dasharray="4,3"/>
+<line x1="1880" y1="740" x2="1880" y2="686" stroke="#000" stroke-width="1" stroke-dasharray="4,3"/>
+<rect x="1080" y="90" width="248" height="82" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="1204.0" y="108" font-size="13" text-anchor="middle" font-weight="bold">MOUVEMENT</text>
+<line x1="1080" y1="116" x2="1328" y2="116" stroke="#000" stroke-width="1"/>
+<text x="1088" y="132" font-size="12">id_mouvement : Integer</text>
+<text x="1088" y="148" font-size="12">date_heure_depart : DateTime</text>
+<text x="1088" y="164" font-size="12">date_heure_arrivee : DateTime [0..1]</text>
+<rect x="925" y="330" width="152" height="50" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="1001.0" y="348" font-size="13" text-anchor="middle" font-weight="bold">LOCATION</text>
+<line x1="925" y1="356" x2="1077" y2="356" stroke="#000" stroke-width="1"/>
+<text x="933" y="372" font-size="12">avec_casque : Boolean</text>
+<rect x="1152" y="330" width="120" height="26" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="1212.0" y="348" font-size="13" text-anchor="middle" font-weight="bold">TRANSFERT</text>
+<rect x="410" y="300" width="222" height="98" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="521.0" y="318" font-size="13" text-anchor="middle" font-weight="bold">FACTURE</text>
+<line x1="410" y1="326" x2="632" y2="326" stroke="#000" stroke-width="1"/>
+<text x="418" y="342" font-size="12">id_facture : Integer</text>
+<text x="418" y="358" font-size="12">date_emission : DateTime</text>
+<text x="418" y="374" font-size="12">montant : Decimal</text>
+<text x="418" y="390" font-size="12">date_reglement : DateTime [0..1]</text>
+<rect x="40" y="500" width="214" height="178" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="147.0" y="518" font-size="13" text-anchor="middle" font-weight="bold">FORMULE</text>
+<line x1="40" y1="526" x2="254" y2="526" stroke="#000" stroke-width="1"/>
+<text x="48" y="542" font-size="12">id_formule : Integer</text>
+<text x="48" y="558" font-size="12">libelle : String</text>
+<text x="48" y="574" font-size="12">prix : Decimal</text>
+<text x="48" y="590" font-size="12">duree_validite_jours : Integer</text>
+<text x="48" y="606" font-size="12">duree_gratuite_min : Integer</text>
+<text x="48" y="622" font-size="12">duree_tranche_min : Integer</text>
+<text x="48" y="638" font-size="12">prix_tranche : Decimal</text>
+<text x="48" y="654" font-size="12">supplement_electrique : Decimal</text>
+<text x="48" y="670" font-size="12">supplement_casque : Decimal</text>
+<rect x="450" y="560" width="164" height="82" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="532.0" y="578" font-size="13" text-anchor="middle" font-weight="bold">ABONNEMENT</text>
+<line x1="450" y1="586" x2="614" y2="586" stroke="#000" stroke-width="1"/>
+<text x="458" y="602" font-size="12">id_abonnement : Integer</text>
+<text x="458" y="618" font-size="12">date_debut : Date</text>
+<text x="458" y="634" font-size="12">date_fin : Date</text>
+<rect x="450" y="800" width="191" height="162" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="545.5" y="818" font-size="13" text-anchor="middle" font-weight="bold">UTILISATEUR</text>
+<line x1="450" y1="826" x2="641" y2="826" stroke="#000" stroke-width="1"/>
+<text x="458" y="842" font-size="12">id_utilisateur : Integer</text>
+<text x="458" y="858" font-size="12">nom : String</text>
+<text x="458" y="874" font-size="12">prenom : String</text>
+<text x="458" y="890" font-size="12">email : String</text>
+<text x="458" y="906" font-size="12">mot_de_passe_hash : String</text>
+<text x="458" y="922" font-size="12">telephone : String</text>
+<text x="458" y="938" font-size="12">date_inscription : DateTime</text>
+<text x="458" y="954" font-size="12">role : Role</text>
+<rect x="450" y="1090" width="248" height="98" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="574.0" y="1108" font-size="13" text-anchor="middle" font-weight="bold">SIGNALEMENT</text>
+<line x1="450" y1="1116" x2="698" y2="1116" stroke="#000" stroke-width="1"/>
+<text x="458" y="1132" font-size="12">id_signalement : Integer</text>
+<text x="458" y="1148" font-size="12">date_heure_signalement : DateTime</text>
+<text x="458" y="1164" font-size="12">description : String</text>
+<text x="458" y="1180" font-size="12">date_heure_cloture : DateTime [0..1]</text>
+<rect x="1080" y="820" width="224" height="82" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="1192.0" y="838" font-size="13" text-anchor="middle" font-weight="bold">TOURNEE</text>
+<line x1="1080" y1="846" x2="1304" y2="846" stroke="#000" stroke-width="1"/>
+<text x="1088" y="862" font-size="12">id_tournee : Integer</text>
+<text x="1088" y="878" font-size="12">date_heure_debut : DateTime</text>
+<text x="1088" y="894" font-size="12">date_heure_fin : DateTime [0..1]</text>
+<rect x="770" y="950" width="169" height="82" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="854.5" y="968" font-size="13" text-anchor="middle" font-weight="bold">VEHICULE</text>
+<line x1="770" y1="976" x2="939" y2="976" stroke="#000" stroke-width="1"/>
+<text x="778" y="992" font-size="12">id_vehicule : Integer</text>
+<text x="778" y="1008" font-size="12">immatriculation : String</text>
+<text x="778" y="1024" font-size="12">capacite : Integer</text>
+<rect x="1450" y="560" width="177" height="66" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="1538.5" y="578" font-size="13" text-anchor="middle" font-weight="bold">INTERVENTION</text>
+<line x1="1450" y1="586" x2="1627" y2="586" stroke="#000" stroke-width="1"/>
+<text x="1458" y="602" font-size="12">id_intervention : Integer</text>
+<text x="1458" y="618" font-size="12">description : String</text>
+<rect x="1340" y="740" width="174" height="26" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="1427.0" y="758" font-size="13" text-anchor="middle" font-weight="bold">INTERVENTION_VELO</text>
+<rect x="1580" y="740" width="224" height="66" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="1692.0" y="758" font-size="13" text-anchor="middle" font-weight="bold">INTERVENTION_STATION</text>
+<line x1="1580" y1="766" x2="1804" y2="766" stroke="#000" stroke-width="1"/>
+<text x="1588" y="782" font-size="12">date_heure_debut : DateTime</text>
+<text x="1588" y="798" font-size="12">date_heure_fin : DateTime [0..1]</text>
+<rect x="1300" y="1010" width="165" height="26" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="1382.5" y="1028" font-size="13" text-anchor="middle" font-weight="bold">SIGNALEMENT_VELO</text>
+<rect x="1300" y="1160" width="191" height="26" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="1395.5" y="1178" font-size="13" text-anchor="middle" font-weight="bold">SIGNALEMENT_STATION</text>
+<rect x="1820" y="90" width="177" height="50" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="1908.5" y="108" font-size="13" text-anchor="middle" font-weight="bold">VELO_ELECTRIQUE</text>
+<line x1="1820" y1="116" x2="1997" y2="116" stroke="#000" stroke-width="1"/>
+<text x="1828" y="132" font-size="12">niveau_batterie : Integer</text>
+<rect x="1820" y="300" width="199" height="66" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="1919.5" y="318" font-size="13" text-anchor="middle" font-weight="bold">VELO</text>
+<line x1="1820" y1="326" x2="2019" y2="326" stroke="#000" stroke-width="1"/>
+<text x="1828" y="342" font-size="12">id_velo : Integer</text>
+<text x="1828" y="358" font-size="12">date_mise_service : DateTime</text>
+<rect x="1820" y="620" width="121" height="66" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="1880.5" y="638" font-size="13" text-anchor="middle" font-weight="bold">BORNE</text>
+<line x1="1820" y1="646" x2="1941" y2="646" stroke="#000" stroke-width="1"/>
+<text x="1828" y="662" font-size="12">numero : Integer</text>
+<text x="1828" y="678" font-size="12">etat : EtatBorne</text>
+<rect x="2200" y="300" width="224" height="82" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="2312.0" y="318" font-size="13" text-anchor="middle" font-weight="bold">CHANGEMENT_ETAT</text>
+<line x1="2200" y1="326" x2="2424" y2="326" stroke="#000" stroke-width="1"/>
+<text x="2208" y="342" font-size="12">id_changement : Integer</text>
+<text x="2208" y="358" font-size="12">date_heure_changement : DateTime</text>
+<text x="2208" y="374" font-size="12">etat : EtatVelo</text>
+<rect x="2240" y="590" width="146" height="146" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="2313.0" y="608" font-size="13" text-anchor="middle" font-weight="bold">STATION</text>
+<line x1="2240" y1="616" x2="2386" y2="616" stroke="#000" stroke-width="1"/>
+<text x="2248" y="632" font-size="12">id_station : Integer</text>
+<text x="2248" y="648" font-size="12">nom : String</text>
+<text x="2248" y="664" font-size="12">adresse : String</text>
+<text x="2248" y="680" font-size="12">code_postal : String</text>
+<text x="2248" y="696" font-size="12">latitude : Decimal</text>
+<text x="2248" y="712" font-size="12">longitude : Decimal</text>
+<text x="2248" y="728" font-size="12">etat : EtatStation</text>
+<rect x="2610" y="90" width="170" height="96" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="2695.0" y="105" font-size="11" text-anchor="middle">«enumeration»</text>
+<text x="2695.0" y="122" font-size="13" text-anchor="middle" font-weight="bold">EtatStation</text>
+<line x1="2610" y1="130" x2="2780" y2="130" stroke="#000" stroke-width="1"/>
+<text x="2618" y="146" font-size="12">EN_SERVICE</text>
+<text x="2618" y="162" font-size="12">HORS_SERVICE</text>
+<text x="2618" y="178" font-size="12">EN_TRAVAUX</text>
+<rect x="2610" y="250" width="170" height="80" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="2695.0" y="265" font-size="11" text-anchor="middle">«enumeration»</text>
+<text x="2695.0" y="282" font-size="13" text-anchor="middle" font-weight="bold">EtatBorne</text>
+<line x1="2610" y1="290" x2="2780" y2="290" stroke="#000" stroke-width="1"/>
+<text x="2618" y="306" font-size="12">EN_SERVICE</text>
+<text x="2618" y="322" font-size="12">HORS_SERVICE</text>
+<rect x="2610" y="394" width="170" height="96" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="2695.0" y="409" font-size="11" text-anchor="middle">«enumeration»</text>
+<text x="2695.0" y="426" font-size="13" text-anchor="middle" font-weight="bold">EtatVelo</text>
+<line x1="2610" y1="434" x2="2780" y2="434" stroke="#000" stroke-width="1"/>
+<text x="2618" y="450" font-size="12">EN_SERVICE</text>
+<text x="2618" y="466" font-size="12">DEFECTUEUX</text>
+<text x="2618" y="482" font-size="12">REFORME</text>
+<rect x="2610" y="554" width="186" height="112" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<text x="2703.0" y="569" font-size="11" text-anchor="middle">«enumeration»</text>
+<text x="2703.0" y="586" font-size="13" text-anchor="middle" font-weight="bold">Role</text>
+<line x1="2610" y1="594" x2="2796" y2="594" stroke="#000" stroke-width="1"/>
+<text x="2618" y="610" font-size="12">USAGER</text>
+<text x="2618" y="626" font-size="12">OPERATEUR_REGULATION</text>
+<text x="2618" y="642" font-size="12">OPERATEUR_MAINTENANCE</text>
+<text x="2618" y="658" font-size="12">ADMINISTRATEUR</text>
+<text x="996.0" y="282.0" font-size="12" text-anchor="middle" font-style="italic">{incomplete, disjoint}</text>
+<text x="1546.5" y="650.0" font-size="12" text-anchor="start" font-style="italic">{complete, disjoint}</text>
+<text x="712.0" y="1170.0" font-size="12" text-anchor="start" font-style="italic">{complete, disjoint}</text>
+<text x="536.0" y="784.0" font-size="12" text-anchor="start" >1</text>
+<text x="536.0" y="662.0" font-size="12" text-anchor="start" >0..*</text>
+<rect x="499.1" y="714.0" width="61.8" height="17" fill="#fff"/>
+<text x="530.0" y="725.0" font-size="12" text-anchor="middle" font-style="italic">souscrit</text>
+<text x="442.0" y="594.0" font-size="12" text-anchor="end" >0..*</text>
+<text x="262.0" y="594.0" font-size="12" text-anchor="start" >1</text>
+<rect x="317.8" y="593.0" width="68.5" height="17" fill="#fff"/>
+<text x="352.0" y="604.0" font-size="12" text-anchor="middle" font-style="italic">relève de</text>
+<text x="606.0" y="662.0" font-size="12" text-anchor="start" >0..1</text>
+<text x="622.0" y="619.0" font-size="12" text-anchor="start" >0..1</text>
+<text x="606.0" y="676.0" font-size="11" text-anchor="start" >précédent</text>
+<text x="622.0" y="641.0" font-size="11" text-anchor="start" >suivant</text>
+<rect x="616.4" y="695.0" width="75.2" height="17" fill="#fff"/>
+<text x="654.0" y="706.0" font-size="12" text-anchor="middle" font-style="italic">renouvelle</text>
+<text x="1006.0" y="400.0" font-size="12" text-anchor="start" >0..*</text>
+<text x="622.0" y="584.0" font-size="12" text-anchor="start" >1</text>
+<rect x="779.5" y="583.0" width="55.0" height="17" fill="#fff"/>
+<text x="807.0" y="594.0" font-size="12" text-anchor="middle" font-style="italic">utilise</text>
+<text x="536.0" y="544.0" font-size="12" text-anchor="start" >0..1</text>
+<text x="536.0" y="418.0" font-size="12" text-anchor="start" >1</text>
+<rect x="462.2" y="472.0" width="135.7" height="17" fill="#fff"/>
+<text x="530.0" y="483.0" font-size="12" text-anchor="middle" font-style="italic">facturer abonnement</text>
+<text x="917.0" y="349.0" font-size="12" text-anchor="end" >0..1</text>
+<text x="640.0" y="349.0" font-size="12" text-anchor="start" >0..1</text>
+<rect x="717.4" y="348.0" width="122.2" height="17" fill="#fff"/>
+<text x="778.5" y="359.0" font-size="12" text-anchor="middle" font-style="italic">facturer location</text>
+<text x="2232.0" y="650.0" font-size="12" text-anchor="end" >1</text>
+<text x="1949.0" y="650.0" font-size="12" text-anchor="start" >1..*</text>
+<rect x="2063.0" y="649.0" width="55.0" height="17" fill="#fff"/>
+<text x="2090.5" y="660.0" font-size="12" text-anchor="middle" font-style="italic">compose</text>
+<text x="1886.0" y="386.0" font-size="12" text-anchor="start" >0..1</text>
+<text x="1886.0" y="604.0" font-size="12" text-anchor="start" >0..1</text>
+<rect x="1845.8" y="486.0" width="68.5" height="17" fill="#fff"/>
+<text x="1880.0" y="497.0" font-size="12" text-anchor="middle" font-style="italic">stationne</text>
+<text x="2027.0" y="330.0" font-size="12" text-anchor="start" >1</text>
+<text x="2192.0" y="330.0" font-size="12" text-anchor="end" >0..*</text>
+<rect x="2088.7" y="329.0" width="41.6" height="17" fill="#fff"/>
+<text x="2109.5" y="340.0" font-size="12" text-anchor="middle" font-style="italic">subit</text>
+<text x="1336.0" y="94.0" font-size="12" text-anchor="start" >0..*</text>
+<text x="1812.0" y="320.0" font-size="12" text-anchor="end" >1</text>
+<rect x="1525.6" y="93.0" width="61.8" height="17" fill="#fff"/>
+<text x="1556.5" y="104.0" font-size="12" text-anchor="middle" font-style="italic">concerne</text>
+<text x="1336.0" y="124.0" font-size="12" text-anchor="start" >0..*</text>
+<text x="1812.0" y="640.0" font-size="12" text-anchor="end" >1</text>
+<rect x="1702.5" y="419.0" width="55.0" height="17" fill="#fff"/>
+<text x="1730.0" y="430.0" font-size="12" text-anchor="middle" font-style="italic">part de</text>
+<text x="1336.0" y="154.0" font-size="12" text-anchor="start" >0..*</text>
+<text x="1812.0" y="666.0" font-size="12" text-anchor="end" >0..1</text>
+<rect x="1644.1" y="489.0" width="61.8" height="17" fill="#fff"/>
+<text x="1675.0" y="500.0" font-size="12" text-anchor="middle" font-style="italic">arrive à</text>
+<text x="1218.0" y="376.0" font-size="12" text-anchor="start" >0..*</text>
+<text x="1218.0" y="804.0" font-size="12" text-anchor="start" >1</text>
+<rect x="1171.0" y="549.0" width="81.9" height="17" fill="#fff"/>
+<text x="1212.0" y="560.0" font-size="12" text-anchor="middle" font-style="italic">fait partie</text>
+<text x="1072.0" y="860.0" font-size="12" text-anchor="end" >0..*</text>
+<text x="649.0" y="860.0" font-size="12" text-anchor="start" >1</text>
+<rect x="812.8" y="859.0" width="95.4" height="17" fill="#fff"/>
+<text x="860.5" y="870.0" font-size="12" text-anchor="middle" font-style="italic">effectuée par</text>
+<text x="1156.0" y="922.0" font-size="12" text-anchor="start" >0..*</text>
+<text x="947.0" y="985.0" font-size="12" text-anchor="start" >1</text>
+<rect x="996.8" y="984.0" width="95.4" height="17" fill="#fff"/>
+<text x="1044.5" y="995.0" font-size="12" text-anchor="middle" font-style="italic">réalisée avec</text>
+<text x="536.0" y="982.0" font-size="12" text-anchor="start" >1</text>
+<text x="536.0" y="1074.0" font-size="12" text-anchor="start" >0..*</text>
+<rect x="499.1" y="1019.0" width="61.8" height="17" fill="#fff"/>
+<text x="530.0" y="1030.0" font-size="12" text-anchor="middle" font-style="italic">émis par</text>
+<text x="1473.0" y="1018.0" font-size="12" text-anchor="start" >0..*</text>
+<text x="2001.0" y="386.0" font-size="12" text-anchor="start" >1</text>
+<rect x="1565.8" y="1017.0" width="68.5" height="17" fill="#fff"/>
+<text x="1600.0" y="1028.0" font-size="12" text-anchor="middle" font-style="italic">porte sur</text>
+<text x="1499.0" y="1168.0" font-size="12" text-anchor="start" >0..*</text>
+<text x="2341.0" y="756.0" font-size="12" text-anchor="start" >1</text>
+<rect x="1878.8" y="1167.0" width="68.5" height="17" fill="#fff"/>
+<text x="1913.0" y="1178.0" font-size="12" text-anchor="middle" font-style="italic">porte sur</text>
+<text x="1442.0" y="594.0" font-size="12" text-anchor="end" >0..*</text>
+<text x="616.0" y="784.0" font-size="12" text-anchor="start" >1</text>
+<rect x="755.7" y="753.0" width="88.6" height="17" fill="#fff"/>
+<text x="800.0" y="764.0" font-size="12" text-anchor="middle" font-style="italic">réalisée par</text>
+<text x="1386.0" y="724.0" font-size="12" text-anchor="start" >0..1</text>
+<text x="1326.0" y="192.0" font-size="12" text-anchor="start" >1</text>
+<rect x="1335.7" y="459.0" width="88.6" height="17" fill="#fff"/>
+<text x="1380.0" y="470.0" font-size="12" text-anchor="middle" font-style="italic">donne lieu à</text>
+<text x="1426.0" y="786.0" font-size="12" text-anchor="start" >0..1</text>
+<text x="1426.0" y="994.0" font-size="12" text-anchor="start" >0..*</text>
+<rect x="1382.4" y="889.0" width="75.2" height="17" fill="#fff"/>
+<text x="1420.0" y="900.0" font-size="12" text-anchor="middle" font-style="italic">traité par</text>
+<text x="1706.0" y="826.0" font-size="12" text-anchor="start" >0..*</text>
+<text x="1426.0" y="1144.0" font-size="12" text-anchor="start" >1</text>
+<rect x="1535.8" y="1093.0" width="48.3" height="17" fill="#fff"/>
+<text x="1560.0" y="1104.0" font-size="12" text-anchor="middle" font-style="italic">traite</text>
+<line x1="1205.0" y1="760" x2="1219.0" y2="760" stroke="#fff" stroke-width="3"/><path d="M1205.0,760 A7,7 0 0 1 1219.0,760" fill="none" stroke="#000" stroke-width="1.2"/>
+<line x1="1693" y1="1024" x2="1707" y2="1024" stroke="#fff" stroke-width="3"/><path d="M1693,1024 A7,7 0 0 1 1707,1024" fill="none" stroke="#000" stroke-width="1.2"/>
+<path d="M560,150 L915.2,150 L925.2,160 L925.2,194 L560,194 z" fill="#fff" stroke="#000" stroke-width="1"/><path d="M915.2,150 L915.2,160 L925.2,160" fill="none" stroke="#000" stroke-width="1"/>
+<text x="570" y="170" font-size="12">{incomplete, disjoint} : un mouvement de maintenance</text>
+<text x="570" y="186" font-size="12">n'est ni une location ni un transfert</text>
+<path d="M1830,740 L1941.0,740 L1951.0,750 L1951.0,784 L1830,784 z" fill="#fff" stroke="#000" stroke-width="1"/><path d="M1941.0,740 L1941.0,750 L1951.0,750" fill="none" stroke="#000" stroke-width="1"/>
+<text x="1840" y="760" font-size="12">numero unique</text>
+<text x="1840" y="776" font-size="12">dans sa station</text>
+</svg>

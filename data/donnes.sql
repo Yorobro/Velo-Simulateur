@@ -1,19 +1,12 @@
 -- =============================================================================
 --  Réseau de vélos en libre-service — DONNÉES DE TEST
 -- =============================================================================
---  À exécuter après structure.sql. MySQL 8.4 LTS / 9.x.
---  Période simulée : septembre à novembre 2026 (dernières données : 4 novembre).
---  Les données respectent les règles du sujet, y compris celles qui seront
---  imposées plus tard par triggers (R1 à R22, voir la fin de structure.sql) :
---  un vélo à un seul endroit, une borne = un vélo, une location à la fois,
---  abonnement valide, pas d'emprunt d'un vélo défectueux (un vélo signalé
---  passe DEFECTUEUX), montants calculés selon la formule (casque compris),
---  une facture par abonnement et par location terminée (même à 0 €), rôles
---  des opérateurs, capacité des véhicules.
---
---  Mots de passe : les empreintes sont FICTIVES (format bcrypt, mais elles ne
---  correspondent à aucun mot de passe). Elles seront remplacées par de vraies
---  empreintes générées par l'interface.
+--  Petit jeu de données écrit à la main (le grand volume est produit par
+--  peuplement_velo.py). À exécuter après structure.sql, avant
+--  automatisation.sql. Période : septembre à novembre 2026.
+--  Les données respectent les règles R1 à R22.
+--  Les empreintes de mot de passe sont fictives (format bcrypt, mais ne
+--  correspondent à aucun mot de passe).
 -- =============================================================================
 
 SET NAMES utf8mb4;

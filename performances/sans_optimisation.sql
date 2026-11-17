@@ -1,14 +1,10 @@
 -- =============================================================================
 --  Réseau de vélos en libre-service — RETOUR À L'ÉTAT « SANS OPTIMISATION »
 -- =============================================================================
---  Sert uniquement à la mesure « avant » du rapport de performances
---  (V2/rapport_performances.md). Il annule ce qu'ajoute optimisation.sql :
---    - les 12 index idx_* (et remet les index de clés étrangères qu'ils
---      remplaçaient) ;
---    - les histogrammes de l'optimiseur ;
---    - l'événement de rafraîchissement des statistiques.
---    - les vues optimisées de automatisation.sql (remplacées par leurs
---      versions de référence, plus lentes, conservées ici).
+--  Mesure « avant » du rapport de performances (7_rapport_performances.md).
+--  Annule ce qu'ajoute l'optimisation : les 12 index idx_* (les index de clés
+--  étrangères sont remis), les histogrammes, l'événement de rafraîchissement,
+--  et remet les vues dans leur version de référence, plus lente.
 --  Aucune donnée n'est modifiée.
 --
 --    mysql velo_libre_service < performances/sans_optimisation.sql

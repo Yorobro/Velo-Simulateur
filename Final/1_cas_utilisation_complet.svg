@@ -1,0 +1,256 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2600" height="2130" viewBox="0 0 2600 2130" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13">
+<title>Diagramme de cas d'utilisation — Réseau de vélos en libre-service (V2 complète)</title>
+<defs>
+  <marker id="open" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto">
+    <path d="M1,1 L11,6 L1,11" fill="none" stroke="#222" stroke-width="1.3"/>
+  </marker>
+  <marker id="tri" viewBox="0 0 18 18" refX="17" refY="9" markerWidth="18" markerHeight="18" markerUnits="userSpaceOnUse" orient="auto">
+    <path d="M1,1 L17,9 L1,17 z" fill="#fff" stroke="#222" stroke-width="1.3"/>
+  </marker>
+</defs>
+<rect width="2600" height="2130" fill="#fff"/>
+<rect x="190" y="40" width="2030" height="2040" fill="#fcfcf4" stroke="#222" stroke-width="1.5"/>
+<text x="1205.0" y="66" text-anchor="middle" font-size="17" font-weight="bold">Système de vélos en libre-service</text>
+<line x1="119.0" y1="1086.0" x2="300.0" y2="246.0" stroke="#222" stroke-width="1.2"/>
+<line x1="119.0" y1="1086.0" x2="300.0" y2="1100.0" stroke="#222" stroke-width="1.2"/>
+<line x1="119.0" y1="1086.0" x2="300.0" y2="368.0" stroke="#222" stroke-width="1.2"/>
+<line x1="119.0" y1="1086.0" x2="300.0" y2="490.0" stroke="#222" stroke-width="1.2"/>
+<line x1="119.0" y1="1086.0" x2="300.0" y2="612.0" stroke="#222" stroke-width="1.2"/>
+<line x1="119.0" y1="1086.0" x2="300.0" y2="734.0" stroke="#222" stroke-width="1.2"/>
+<line x1="119.0" y1="1086.0" x2="300.0" y2="1222.0" stroke="#222" stroke-width="1.2"/>
+<line x1="119.0" y1="1086.0" x2="300.0" y2="1344.0" stroke="#222" stroke-width="1.2"/>
+<line x1="119.0" y1="1086.0" x2="300.0" y2="856.0" stroke="#222" stroke-width="1.2"/>
+<line x1="119.0" y1="1086.0" x2="300.0" y2="1588.0" stroke="#222" stroke-width="1.2"/>
+<line x1="119.0" y1="1086.0" x2="300.0" y2="1466.0" stroke="#222" stroke-width="1.2"/>
+<line x1="119.0" y1="1086.0" x2="300.0" y2="978.0" stroke="#222" stroke-width="1.2"/>
+<line x1="119.0" y1="1086.0" x2="300.0" y2="1710.0" stroke="#222" stroke-width="1.2"/>
+<line x1="119.0" y1="1086.0" x2="300.0" y2="1832.0" stroke="#222" stroke-width="1.2"/>
+<line x1="119.0" y1="1086.0" x2="300.0" y2="1954.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2306.0" y1="416.0" x2="420.6" y2="1083.2" stroke="#222" stroke-width="1.2"/>
+<line x1="2306.0" y1="416.0" x2="863.0" y2="1074.4" stroke="#222" stroke-width="1.2"/>
+<line x1="2306.0" y1="416.0" x2="1850.0" y2="130.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2306.0" y1="416.0" x2="1850.0" y2="250.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2306.0" y1="416.0" x2="1850.0" y2="395.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2306.0" y1="416.0" x2="1850.0" y2="530.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2306.0" y1="416.0" x2="1850.0" y2="850.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2306.0" y1="1756.0" x2="421.8" y2="1116.5" stroke="#222" stroke-width="1.2"/>
+<line x1="2306.0" y1="1756.0" x2="864.7" y2="1125.3" stroke="#222" stroke-width="1.2"/>
+<line x1="2306.0" y1="1756.0" x2="1850.0" y2="1660.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2306.0" y1="1756.0" x2="1850.0" y2="1775.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2306.0" y1="1756.0" x2="1850.0" y2="1900.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2306.0" y1="1756.0" x2="1850.0" y2="2025.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2306.0" y1="1756.0" x2="1850.0" y2="1360.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2456.0" y1="1071.0" x2="2190.0" y2="785.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2456.0" y1="1071.0" x2="2190.0" y2="868.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2456.0" y1="1071.0" x2="2190.0" y2="948.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2456.0" y1="1071.0" x2="2190.0" y2="1212.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2456.0" y1="1071.0" x2="2190.0" y2="1295.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2456.0" y1="1071.0" x2="2190.0" y2="1380.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2456.0" y1="1071.0" x2="2190.0" y2="1035.0" stroke="#222" stroke-width="1.2"/>
+<line x1="2480.0" y1="1033.0" x2="2330.0" y2="488.0" stroke="#222" stroke-width="1.2" marker-end="url(#tri)"/>
+<line x1="2480.0" y1="1143.0" x2="2330.0" y2="1718.0" stroke="#222" stroke-width="1.2" marker-end="url(#tri)"/>
+<line x1="1890" y1="1035" x2="1962.5" y2="1035" stroke="#222" stroke-width="1.2" marker-end="url(#tri)"/>
+<line x1="1850.0" y1="850" x2="1890" y2="850" stroke="#222" stroke-width="1.2"/>
+<line x1="1850.0" y1="995" x2="1890" y2="995" stroke="#222" stroke-width="1.2"/>
+<line x1="1850.0" y1="1150" x2="1890" y2="1150" stroke="#222" stroke-width="1.2"/>
+<line x1="1850.0" y1="1360" x2="1890" y2="1360" stroke="#222" stroke-width="1.2"/>
+<line x1="1890" y1="850" x2="1890" y2="1360" stroke="#222" stroke-width="1.2"/>
+<line x1="461.1" y1="1240.3" x2="732.7" y2="1326.8" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="514.0" y1="1344.0" x2="700.0" y2="1344.0" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="438.2" y1="1449.4" x2="731.0" y2="1360.9" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="466.4" y1="1467.9" x2="700.3" y2="1473.3" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="449.6" y1="1601.4" x2="734.9" y2="1658.9" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="1673.7" y1="1753.6" x2="1476.9" y2="1695.7" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="1642.8" y1="1775.0" x2="1500.0" y2="1775.0" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="1673.3" y1="1796.3" x2="1483.2" y2="1851.6" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="1741.3" y1="160.0" x2="1744.7" y2="220.0" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="1688.6" y1="370.1" x2="1465.0" y2="273.7" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="1650.2" y1="383.8" x2="1493.8" y2="365.6" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="1661.3" y1="412.1" x2="1491.5" y2="446.3" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="1692.5" y1="420.6" x2="1451.0" y2="535.4" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="807.9" y1="1783.6" x2="424.8" y2="1607.1" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="1046.3" y1="1594.9" x2="450.5" y2="1479.1" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="1012.6" y1="1460.4" x2="825.1" y2="1363.7" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="2074.0" y1="1092.0" x2="2075.4" y2="1057.0" stroke="#222" stroke-width="1.2" stroke-dasharray="7,5" marker-end="url(#open)"/>
+<line x1="918.8" y1="1412.1" x2="1012.9" y2="1516" stroke="#222" stroke-width="1" stroke-dasharray="3,3"/>
+<ellipse cx="400.2" cy="978" rx="100.2" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="400.2" y="974.5" text-anchor="middle">Consulter l'historique</text>
+<text x="400.2" y="990.5" text-anchor="middle">de ses trajets</text>
+<ellipse cx="410.4" cy="856" rx="110.4" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="410.4" y="852.5" text-anchor="middle">Consulter ses abonnements</text>
+<text x="410.4" y="868.5" text-anchor="middle">(en cours / expirés)</text>
+<ellipse cx="400.2" cy="734" rx="100.2" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="400.2" y="730.5" text-anchor="middle">Consulter les formules</text>
+<text x="400.2" y="746.5" text-anchor="middle">et tarifs</text>
+<ellipse cx="440.8" cy="612" rx="140.8" ry="38.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="440.8" y="600.5" text-anchor="middle">Rechercher et filtrer les stations</text>
+<text x="440.8" y="616.5" text-anchor="middle">(type de vélo disponible,</text>
+<text x="440.8" y="632.5" text-anchor="middle">bornes libres)</text>
+<ellipse cx="400.2" cy="490" rx="100.2" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="400.2" y="494.5" text-anchor="middle">Voir les bornes libres</text>
+<ellipse cx="420.5" cy="368" rx="120.5" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="420.5" y="364.5" text-anchor="middle">Voir en temps réel les vélos</text>
+<text x="420.5" y="380.5" text-anchor="middle">disponibles (par type)</text>
+<ellipse cx="359.8" cy="246" rx="59.8" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="359.8" y="250.5" text-anchor="middle">S'inscrire</text>
+<ellipse cx="403.6" cy="1222" rx="103.6" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="403.6" y="1226.5" text-anchor="middle">Souscrire un abonnement</text>
+<ellipse cx="407.0" cy="1344" rx="107.0" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="407.0" y="1348.5" text-anchor="middle">Renouveler un abonnement</text>
+<ellipse cx="383.4" cy="1466" rx="83.4" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="383.4" y="1470.5" text-anchor="middle">Restituer un vélo</text>
+<ellipse cx="383.4" cy="1588" rx="83.4" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="383.4" y="1592.5" text-anchor="middle">Emprunter un vélo</text>
+<ellipse cx="400.2" cy="1710" rx="100.2" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="400.2" y="1714.5" text-anchor="middle">Consulter ses factures</text>
+<ellipse cx="393.5" cy="1832" rx="93.5" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="393.5" y="1828.5" text-anchor="middle">Signaler un problème</text>
+<text x="393.5" y="1844.5" text-anchor="middle">sur un vélo</text>
+<ellipse cx="393.5" cy="1954" rx="93.5" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="393.5" y="1950.5" text-anchor="middle">Signaler un problème</text>
+<text x="393.5" y="1966.5" text-anchor="middle">sur une station</text>
+<ellipse cx="373.2" cy="1100" rx="73.2" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="373.2" y="1104.5" text-anchor="middle">S'authentifier</text>
+<ellipse cx="786.8" cy="1344" rx="86.8" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="786.8" y="1348.5" text-anchor="middle">Générer la facture</text>
+<ellipse cx="1042.9" cy="1476" rx="42.9" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1042.9" y="1480.5" text-anchor="middle">Payer</text>
+<ellipse cx="820.5" cy="1476" rx="120.5" ry="38.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="820.5" y="1464.5" text-anchor="middle">Calculer la durée et le coût</text>
+<text x="820.5" y="1480.5" text-anchor="middle">(suppléments électrique</text>
+<text x="820.5" y="1496.5" text-anchor="middle">et casque)</text>
+<ellipse cx="1113.4" cy="1608" rx="83.4" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1113.4" y="1612.5" text-anchor="middle">Déposer un casque</text>
+<ellipse cx="854.2" cy="1683" rx="154.2" ry="38.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="854.2" y="1671.5" text-anchor="middle">Vérifier les conditions d'emprunt</text>
+<text x="854.2" y="1687.5" text-anchor="middle">(abonnement valide, aucun emprunt</text>
+<text x="854.2" y="1703.5" text-anchor="middle">en cours, vélo non signalé défectueux)</text>
+<ellipse cx="850.1" cy="1803" rx="90.1" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="850.1" y="1807.5" text-anchor="middle">Récupérer un casque</text>
+<ellipse cx="807.0" cy="1100" rx="107.0" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="807.0" y="1096.5" text-anchor="middle">Consulter la position et</text>
+<text x="807.0" y="1112.5" text-anchor="middle">l'historique d'un vélo</text>
+<ellipse cx="1739.6" cy="130" rx="110.4" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1739.6" y="126.5" text-anchor="middle">Proposer des déplacements</text>
+<text x="1739.6" y="142.5" text-anchor="middle">de vélos</text>
+<ellipse cx="1746.4" cy="250" rx="103.6" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1746.4" y="246.5" text-anchor="middle">Identifier les stations</text>
+<text x="1746.4" y="262.5" text-anchor="middle">pleines ou vides</text>
+<ellipse cx="1746.4" cy="395" rx="103.6" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1746.4" y="391.5" text-anchor="middle">Enregistrer une tournée</text>
+<text x="1746.4" y="407.5" text-anchor="middle">de rééquilibrage</text>
+<ellipse cx="1709.2" cy="530" rx="140.8" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1709.2" y="526.5" text-anchor="middle">Rechercher et filtrer les tournées</text>
+<text x="1709.2" y="542.5" text-anchor="middle">(date, véhicule, opérateur)</text>
+<ellipse cx="1409.9" cy="250" rx="90.1" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1409.9" y="246.5" text-anchor="middle">Démarrer la tournée</text>
+<text x="1409.9" y="262.5" text-anchor="middle">(choix du véhicule)</text>
+<ellipse cx="1403.1" cy="355" rx="96.9" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1403.1" y="351.5" text-anchor="middle">Charger un vélo</text>
+<text x="1403.1" y="367.5" text-anchor="middle">(retrait d'une borne)</text>
+<ellipse cx="1423.4" cy="460" rx="76.6" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1423.4" y="456.5" text-anchor="middle">Déposer un vélo</text>
+<text x="1423.4" y="472.5" text-anchor="middle">sur une borne</text>
+<ellipse cx="1409.9" cy="555" rx="90.1" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1409.9" y="559.5" text-anchor="middle">Clôturer la tournée</text>
+<ellipse cx="1736.2" cy="1660" rx="113.8" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1736.2" y="1664.5" text-anchor="middle">Consulter les signalements</text>
+<ellipse cx="1746.4" cy="1775" rx="103.6" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1746.4" y="1771.5" text-anchor="middle">Gérer les interventions</text>
+<text x="1746.4" y="1787.5" text-anchor="middle">de maintenance</text>
+<ellipse cx="1729.5" cy="1900" rx="120.5" ry="38.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1729.5" y="1888.5" text-anchor="middle">Changer l'état d'une station</text>
+<text x="1729.5" y="1904.5" text-anchor="middle">(en service, hors service,</text>
+<text x="1729.5" y="1920.5" text-anchor="middle">en travaux)</text>
+<ellipse cx="1719.4" cy="2025" rx="130.6" ry="38.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1719.4" y="2013.5" text-anchor="middle">Rechercher et filtrer les vélos</text>
+<text x="1719.4" y="2029.5" text-anchor="middle">(type, état, position,</text>
+<text x="1719.4" y="2045.5" text-anchor="middle">niveau de batterie)</text>
+<ellipse cx="1423.4" cy="1680" rx="76.6" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1423.4" y="1684.5" text-anchor="middle">Retirer le vélo</text>
+<ellipse cx="1423.4" cy="1775" rx="76.6" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1423.4" y="1779.5" text-anchor="middle">Réparer le vélo</text>
+<ellipse cx="1420.0" cy="1870" rx="80.0" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1420.0" y="1866.5" text-anchor="middle">Remettre le vélo</text>
+<text x="1420.0" y="1882.5" text-anchor="middle">en circulation</text>
+<ellipse cx="1709.2" cy="850" rx="140.8" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1709.2" y="846.5" text-anchor="middle">Consulter le taux de remplissage</text>
+<text x="1709.2" y="862.5" text-anchor="middle">des stations (par tranche horaire)</text>
+<ellipse cx="1695.8" cy="995" rx="154.2" ry="38.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1695.8" y="983.5" text-anchor="middle">Consulter les statistiques des trajets</text>
+<text x="1695.8" y="999.5" text-anchor="middle">(nombre par période, heures de pointe,</text>
+<text x="1695.8" y="1015.5" text-anchor="middle">trajets origine-destination)</text>
+<ellipse cx="1749.8" cy="1150" rx="100.2" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1749.8" y="1146.5" text-anchor="middle">Consulter les recettes</text>
+<text x="1749.8" y="1162.5" text-anchor="middle">par formule</text>
+<ellipse cx="1705.9" cy="1360" rx="144.1" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="1705.9" y="1356.5" text-anchor="middle">Consulter le taux d'indisponibilité</text>
+<text x="1705.9" y="1372.5" text-anchor="middle">de la flotte</text>
+<ellipse cx="2103.2" cy="785" rx="86.8" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="2103.2" y="781.5" text-anchor="middle">Gérer les stations</text>
+<text x="2103.2" y="797.5" text-anchor="middle">et leurs bornes</text>
+<ellipse cx="2083.0" cy="868" rx="107.0" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="2083.0" y="872.5" text-anchor="middle">Gérer la flotte de vélos</text>
+<ellipse cx="2099.9" cy="948" rx="90.1" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="2099.9" y="944.5" text-anchor="middle">Gérer les véhicules</text>
+<text x="2099.9" y="960.5" text-anchor="middle">de régulation</text>
+<ellipse cx="2076.2" cy="1035" rx="113.8" ry="22.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="2076.2" y="1039.5" text-anchor="middle">Consulter les statistiques</text>
+<ellipse cx="2072.9" cy="1122" rx="117.1" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="2072.9" y="1118.5" text-anchor="middle">Générer un rapport</text>
+<text x="2072.9" y="1134.5" text-anchor="middle">(à partir des statistiques)</text>
+<ellipse cx="2103.2" cy="1212" rx="86.8" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="2103.2" y="1208.5" text-anchor="middle">Gérer les formules</text>
+<text x="2103.2" y="1224.5" text-anchor="middle">tarifaires</text>
+<ellipse cx="2106.6" cy="1295" rx="83.4" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="2106.6" y="1291.5" text-anchor="middle">Gérer les comptes</text>
+<text x="2106.6" y="1307.5" text-anchor="middle">et les droits</text>
+<ellipse cx="2045.9" cy="1380" rx="144.1" ry="30.0" fill="#fffde8" stroke="#222" stroke-width="1.3"/>
+<text x="2045.9" y="1376.5" text-anchor="middle">Rechercher et filtrer les locations</text>
+<text x="2045.9" y="1392.5" text-anchor="middle">(usager, station, période)</text>
+<rect x="577.6" y="1278.9" width="65.7" height="18" fill="#fff" opacity="0.92"/>
+<text x="610.5" y="1291.9" text-anchor="middle" font-size="12">«include»</text>
+<rect x="574.1" y="1335.0" width="65.7" height="18" fill="#fff" opacity="0.92"/>
+<text x="607.0" y="1348.0" text-anchor="middle" font-size="12">«include»</text>
+<rect x="537.1" y="1400.6" width="65.7" height="18" fill="#fff" opacity="0.92"/>
+<text x="570.0" y="1413.6" text-anchor="middle" font-size="12">«include»</text>
+<rect x="550.5" y="1461.6" width="65.7" height="18" fill="#fff" opacity="0.92"/>
+<text x="583.4" y="1474.6" text-anchor="middle" font-size="12">«include»</text>
+<rect x="559.4" y="1621.1" width="65.7" height="18" fill="#fff" opacity="0.92"/>
+<text x="592.3" y="1634.1" text-anchor="middle" font-size="12">«include»</text>
+<rect x="1542.4" y="1715.7" width="65.7" height="18" fill="#fff" opacity="0.92"/>
+<text x="1575.3" y="1728.7" text-anchor="middle" font-size="12">«include»</text>
+<rect x="1538.5" y="1766.0" width="65.7" height="18" fill="#fff" opacity="0.92"/>
+<text x="1571.4" y="1779.0" text-anchor="middle" font-size="12">«include»</text>
+<rect x="1545.4" y="1814.9" width="65.7" height="18" fill="#fff" opacity="0.92"/>
+<text x="1578.2" y="1827.9" text-anchor="middle" font-size="12">«include»</text>
+<rect x="1758.1" y="181.0" width="65.7" height="18" fill="#fff" opacity="0.92"/>
+<text x="1791.0" y="194.0" text-anchor="middle" font-size="12">«include»</text>
+<rect x="1543.9" y="312.9" width="65.7" height="18" fill="#fff" opacity="0.92"/>
+<text x="1576.8" y="325.9" text-anchor="middle" font-size="12">«include»</text>
+<rect x="1539.2" y="365.7" width="65.7" height="18" fill="#fff" opacity="0.92"/>
+<text x="1572.0" y="378.7" text-anchor="middle" font-size="12">«include»</text>
+<rect x="1543.5" y="420.2" width="65.7" height="18" fill="#fff" opacity="0.92"/>
+<text x="1576.4" y="433.2" text-anchor="middle" font-size="12">«include»</text>
+<rect x="1538.9" y="469.0" width="65.7" height="18" fill="#fff" opacity="0.92"/>
+<text x="1571.8" y="482.0" text-anchor="middle" font-size="12">«include»</text>
+<rect x="586.7" y="1686.3" width="59.3" height="18" fill="#fff" opacity="0.92"/>
+<text x="616.4" y="1699.3" text-anchor="middle" font-size="12">«extend»</text>
+<rect x="688.9" y="1522.2" width="59.3" height="18" fill="#fff" opacity="0.92"/>
+<text x="718.6" y="1535.2" text-anchor="middle" font-size="12">«extend»</text>
+<rect x="889.2" y="1403.1" width="59.3" height="18" fill="#fff" opacity="0.92"/>
+<text x="918.8" y="1416.1" text-anchor="middle" font-size="12">«extend»</text>
+<rect x="2103.1" y="1065.5" width="59.3" height="18" fill="#fff" opacity="0.92"/>
+<text x="2132.7" y="1078.5" text-anchor="middle" font-size="12">«extend»</text>
+<path d="M992.875,1516 L1230.875,1516 L1242.875,1528 L1242.875,1570 L992.875,1570 z" fill="#fffbe6" stroke="#222" stroke-width="1"/><path d="M1230.875,1516 L1230.875,1528 L1242.875,1528" fill="none" stroke="#222" stroke-width="1"/>
+<text x="1002.875" y="1537" font-size="12">Condition : {montant de la facture &gt; 0}</text>
+<text x="1002.875" y="1555" font-size="12">Point d'extension : paiement</text>
+<g stroke="#222" stroke-width="1.6" fill="none"><circle cx="95" cy="1062" r="11" fill="#fff"/><line x1="95" y1="1073" x2="95" y2="1105"/><line x1="77" y1="1084" x2="113" y2="1084"/><line x1="95" y1="1105" x2="80" y2="1130"/><line x1="95" y1="1105" x2="110" y2="1130"/></g>
+<text x="95" y="1150" text-anchor="middle" font-weight="bold">Usager</text>
+<g stroke="#222" stroke-width="1.6" fill="none"><circle cx="2330" cy="392" r="11" fill="#fff"/><line x1="2330" y1="403" x2="2330" y2="435"/><line x1="2312" y1="414" x2="2348" y2="414"/><line x1="2330" y1="435" x2="2315" y2="460"/><line x1="2330" y1="435" x2="2345" y2="460"/></g>
+<text x="2330" y="480" text-anchor="middle" font-weight="bold">Opérateur de régulation</text>
+<g stroke="#222" stroke-width="1.6" fill="none"><circle cx="2330" cy="1732" r="11" fill="#fff"/><line x1="2330" y1="1743" x2="2330" y2="1775"/><line x1="2312" y1="1754" x2="2348" y2="1754"/><line x1="2330" y1="1775" x2="2315" y2="1800"/><line x1="2330" y1="1775" x2="2345" y2="1800"/></g>
+<text x="2330" y="1820" text-anchor="middle" font-weight="bold">Opérateur de maintenance</text>
+<g stroke="#222" stroke-width="1.6" fill="none"><circle cx="2480" cy="1047" r="11" fill="#fff"/><line x1="2480" y1="1058" x2="2480" y2="1090"/><line x1="2462" y1="1069" x2="2498" y2="1069"/><line x1="2480" y1="1090" x2="2465" y2="1115"/><line x1="2480" y1="1090" x2="2495" y2="1115"/></g>
+<text x="2480" y="1135" text-anchor="middle" font-weight="bold">Administrateur</text>
+</svg>

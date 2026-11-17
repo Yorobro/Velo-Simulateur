@@ -1,43 +1,17 @@
 -- =============================================================================
 --  Réseau de vélos en libre-service — SIMULATION D'ACTIVITÉ (événements)
 -- =============================================================================
---  Événements planifiés (Event Scheduler) qui font vivre la base en temps
---  réel : emprunts et restitutions, recharge des vélos électriques,
---  signalements, maintenance, tournées de régulation, règlement des
---  factures, abonnements et inscriptions.
---
---  Toutes les écritures passent par les procédures de automatisation.sql :
---  les triggers (règles R1 à R22) s'appliquent donc comme pour un vrai
---  usager ou opérateur. Une action refusée par une règle (vélo pris entre-
---  temps, station pleine, usager déjà en location…) est simplement ignorée.
---  Aucune table ni colonne n'est ajoutée.
---
---  Les comptes de démonstration (admin@, regulation@, maintenance@ et
---  usager@velo.example.org) ne sont jamais utilisés par la simulation :
---  les tests faits à la main dans l'interface ne sont pas perturbés.
---
---  ORDRE D'EXÉCUTION :
---    structure.sql -> peuplement_velo.py -> automatisation.sql
---    -> optimisation.sql -> simulation.sql
---  Le script est rejouable : il supprime puis recrée tous ses objets.
+--  Événements planifiés qui font vivre la base en temps réel. Toutes les
+--  écritures passent par les procédures de automatisation.sql, donc par les
+--  règles R1 à R22 ; une action refusée (vélo pris entre-temps, station
+--  pleine...) est ignorée. Les comptes de démonstration ne sont jamais utilisés.
+--  Ordre : ... -> optimisation.sql -> simulation.sql. Rejouable.
 --
 --  Pilotage
---    CALL sim_arreter();     suspend tous les événements de simulation
---    CALL sim_demarrer();    les relance
---    CALL sim_etat();        état et dernière exécution de chaque événement
+--    CALL sim_arreter();  CALL sim_demarrer();  CALL sim_etat();
 --    SELECT * FROM v_simulation_activite;   activité de la dernière heure
---  Volume : sim_facteur_demo() (mode démo, 5 par défaut ; 1 = volume
---  réaliste de l'historique) x 900 trajets par jour, modulé par l'heure, le
---  jour de la semaine et la saison comme dans peuplement_velo.py.
---
---  Un trajet simulé est un vrai trajet : l'emprunt retire le vélo de sa
---  borne (il n'est plus disponible, la borne se libère), la restitution le
---  pose sur une borne libre de la station d'arrivée et crée la facture.
---  L'usager part le plus souvent de sa station habituelle à cette heure ;
---  la station d'arrivée est à une distance cohérente avec la durée du trajet.
---
---  Prérequis : planificateur d'événements actif (event_scheduler = ON,
---  valeur par défaut de MySQL 8 et 9).
+--  Volume : sim_facteur_demo() x 900 trajets par jour (5 par défaut, 1 =
+--  volume réaliste), modulé par l'heure, le jour et la saison.
 --
 --  Événements
 --    evt_sim_emprunts         1 min   emprunts (pointes le matin et le soir)

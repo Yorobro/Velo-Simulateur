@@ -1,60 +1,20 @@
 -- =============================================================================
 --  Réseau de vélos en libre-service — AUTOMATISATION
 -- =============================================================================
---  Fonctions, procédures stockées, triggers et vues de la base
---  velo_libre_service. Ne modifie ni le MCD ni le MLD : aucune table ni
---  colonne n'est ajoutée.
+--  Fonctions, procédures stockées, triggers et vues. Aucune table ajoutée.
+--  Ordre : structure.sql -> peuplement_velo.py (ou donnes.sql)
+--          -> automatisation.sql. Ce script passe après les données, car
+--          ses triggers créent eux-mêmes factures et changements d'état.
+--  Rejouable : il supprime puis recrée ses objets.
 --
---  ORDRE D'EXÉCUTION :
---    structure.sql -> peuplement_velo.py (ou donnes.sql) -> automatisation.sql
---  (les triggers créent eux-mêmes factures et changements d'état : chargés
---  avant les données, ils produiraient des doublons).
---  Le script est rejouable : il supprime puis recrée tous ses objets.
+--    1. Fonctions    2. Contrôles    3. Triggers (règles R1 à R22 du MLD)
+--    4. Procédures   une par cas d'utilisation, chacune dans une transaction
+--    5. Vues         disponibilité, régulation, consultation, statistiques
 --
---  SGBD : MySQL 8.4 LTS / 9.x (testé sur MySQL 9.0). N'utilise que des
---  fonctionnalités présentes aussi dans MariaDB 10.11+.
---
---  Contenu
---    1. Fonctions        fn_etat_velo, fn_abonnement_valide, fn_duree_minutes,
---                        fn_cout_trajet, fn_cout_location, fn_borne_libre
---    2. Contrôles        lever_erreur, verifier_borne_accueil,
---                        verifier_mouvement_libre, verifier_traitement,
---                        verifier_abonnement_unique
---    3. Triggers         règles R1 à R22 de structure.sql + historisation
---                        et calculs automatiques
---    4. Procédures       une par cas d'utilisation (emprunter_velo, ...)
---    5. Vues             disponibilité temps réel, régulation, consultation,
---                        statistiques du sujet. Six d'entre elles sont écrites
---                        directement dans leur version optimisée (état actuel
---                        des vélos, locations, statistiques) : elles s'appuient
---                        sur les index d'optimisation.sql, mais restent justes
---                        sans eux.
---
---  Ce qui est automatique
---    - position du vélo tenue à jour à chaque départ / arrivée (R5) ;
---    - historique des états : EN_SERVICE à la mise en service, DEFECTUEUX au
---      signalement d'un problème ou au retrait pour maintenance, EN_SERVICE à
---      la remise en circulation ou à la clôture d'une fausse alerte, REFORME
---      quand le vélo arrive à l'atelier sans borne (R19, R20) ;
---    - date de fin d'un abonnement calculée depuis la formule (R11) ;
---    - facture créée à la souscription d'un abonnement et à la restitution
---      de chaque location, même gratuite (durée et coût calculés, R4, R18) ;
---    - signalements de vélo rattachés à l'intervention qui retire le vélo,
---      puis clos à la fin de l'intervention ;
---    - e-mail normalisé en minuscules.
---
---  Les procédures sont la voie normale d'écriture : chacune est une
---  transaction complète (elle valide ou annule tout) et pose les verrous
---  (SELECT ... FOR UPDATE) qui évitent, par exemple, que deux usagers
---  empruntent le même vélo au même instant. Elles garantissent aussi les
---  généralisations {complete} : un mouvement est toujours créé avec son type,
---  un signalement avec sa cible. Les triggers restent un filet de sécurité
---  pour les écritures directes dans les tables.
---  Attention : une procédure ouvre sa propre transaction ; l'appeler au milieu
---  d'une transaction en cours valide cette dernière.
---
---  Limite connue de MySQL / MariaDB : les suppressions en cascade
---  (ON DELETE CASCADE) ne déclenchent pas les triggers.
+--  Les procédures sont la voie normale d'écriture ; les triggers protègent
+--  aussi les écritures directes. Une procédure ouvre sa propre transaction :
+--  l'appeler dans une transaction en cours valide celle-ci.
+--  Les suppressions en cascade ne déclenchent pas les triggers.
 -- =============================================================================
 
 SET NAMES utf8mb4;
@@ -780,7 +740,7 @@ END$$
 
 -- ---------------------------------------------------------------- signalements
 
--- R12 : seul un usager signale un problème (cas d'utilisation UC10, UC11).
+-- R12 : seul un usager signale un problème.
 CREATE TRIGGER trg_signalement_bi BEFORE INSERT ON signalement FOR EACH ROW
 BEGIN
   IF (SELECT role FROM utilisateur WHERE id_utilisateur = NEW.id_utilisateur) <> 'USAGER' THEN
@@ -1013,7 +973,7 @@ END$$
 
 -- ---------------------------------------------------------------- régulation
 
--- Démarrer une tournée avec le véhicule choisi par l'opérateur (UC31).
+-- Démarrer une tournée avec le véhicule choisi par l'opérateur.
 CREATE PROCEDURE demarrer_tournee(IN p_operateur INT UNSIGNED, IN p_vehicule INT UNSIGNED,
                                   OUT p_tournee INT UNSIGNED)
 BEGIN
@@ -1213,19 +1173,8 @@ DELIMITER ;
 
 -- ---------------------------------------------------------------- flotte
 
--- État actuel de chaque vélo (dernier changement d'état).
--- [écriture optimisée ; la version de référence, plus lente, est conservée dans
---  performances/sans_optimisation.sql pour le rapport de performances]
--- Utilisée par v_velo et v_disponibilite_station (disponibilité en temps
--- réel), donc lue en permanence.
--- Version de référence (lente) : ROW_NUMBER() calculé sur TOUT l'historique
--- des états à chaque lecture (coût proportionnel à la taille de changement_etat).
--- Écriture retenue : « dernier élément de chaque groupe » par GROUP BY + MAX().
--- Avec l'index unique (id_velo, date_heure_changement), le SGBD saute d'un vélo
--- au suivant dans l'index (« skip scan » / « loose index scan ») et ne lit
--- qu'une entrée par vélo : coût proportionnel au nombre de vélos.
--- (Une sous-requête corrélée MAX() ou ORDER BY ... LIMIT 1 ne convient pas :
--- MySQL y relit tout l'historique du vélo.)
+-- État actuel de chaque vélo (dernier changement d'état), lu en permanence.
+-- Optimisée : GROUP BY + MAX() lu dans l'index unique (id_velo, date).
 CREATE VIEW v_etat_actuel_velo AS
 SELECT d.id_velo,
        ce.etat,
@@ -1339,11 +1288,8 @@ SELECT id_station_source, station_source, id_station_destination, station_destin
 
 -- ---------------------------------------------------------------- consultation
 
--- Locations avec durée, statut et montant (coût actuel pour une location en cours).
--- [écriture optimisée ; la version de référence, plus lente, est conservée dans
---  performances/sans_optimisation.sql pour le rapport de performances]
--- La durée est écrite directement plutôt que par fn_duree_minutes() : un appel
--- de fonction stockée par ligne est coûteux (même résultat).
+-- Locations avec durée, statut et montant (coût actuel si en cours).
+-- Durée calculée en ligne : un appel de fonction par ligne est coûteux.
 CREATE VIEW v_location AS
 SELECT l.id_mouvement AS id_location,
        a.id_utilisateur,
@@ -1430,10 +1376,7 @@ SELECT s.id_signalement,
 -- ---------------------------------------------------------------- statistiques
 
 -- Nombre de trajets (locations) par jour et durée moyenne.
--- [écriture optimisée ; la version de référence, plus lente, est conservée dans
---  performances/sans_optimisation.sql pour le rapport de performances]
--- La durée est écrite directement plutôt que par fn_duree_minutes() : un appel
--- de fonction stockée par ligne est coûteux (même résultat).
+-- Durée calculée en ligne : un appel de fonction par ligne est coûteux.
 CREATE VIEW v_stat_trajets_par_jour AS
 SELECT DATE(m.date_heure_depart) AS jour,
        COUNT(*) AS nb_trajets,
@@ -1453,12 +1396,7 @@ SELECT HOUR(m.date_heure_depart) AS heure,
  GROUP BY HOUR(m.date_heure_depart);
 
 -- Trajets origine -> destination, du plus fréquent au moins fréquent (rang).
--- [écriture optimisée ; la version de référence, plus lente, est conservée dans
---  performances/sans_optimisation.sql pour le rapport de performances]
--- Version de référence (lente) : jointure aux deux stations pour CHAQUE
--- trajet, puis regroupement sur les noms.
--- Écriture retenue : regroupement d'abord sur les identifiants, puis jointure
--- aux stations pour les seuls couples obtenus.
+-- Optimisée : regroupement sur les identifiants avant la jointure aux stations.
 CREATE VIEW v_stat_origine_destination AS
 SELECT RANK() OVER (ORDER BY t.nb_trajets DESC) AS rang,
        t.id_station_depart,
@@ -1504,14 +1442,8 @@ SELECT f.id_formule,
 
 -- Indisponibilité de la flotte, par type et au total (ligne 'TOUS') :
 -- situation actuelle et part du temps passé DEFECTUEUX sur 30 jours
--- (les vélos réformés sortent de la flotte).
--- [écriture optimisée ; la version de référence, plus lente, est conservée dans
---  performances/sans_optimisation.sql pour le rapport de performances]
--- Version de référence (lente) : LEAD() calculé sur tout l'historique des
--- états de tous les vélos.
--- Écriture retenue : seuls les changements des 30 derniers jours, plus l'état
--- de chaque vélo au début de la fenêtre (dernier changement antérieur, trouvé
--- par « skip scan » de l'index unique). Même résultat.
+-- (vélos réformés exclus). Optimisée : seuls les changements des 30 jours,
+-- plus l'état de chaque vélo au début de la fenêtre.
 CREATE VIEW v_stat_indisponibilite_flotte AS
 WITH changements AS (
   -- changements survenus dans la fenêtre de 30 jours
@@ -1553,29 +1485,11 @@ SELECT COALESCE(v.type_velo, 'TOUS') AS type_velo,
   LEFT JOIN minutes_30j m ON m.id_velo = v.id_velo
  GROUP BY v.type_velo WITH ROLLUP;
 
--- Taux de remplissage moyen des stations par tranche horaire, sur les 30
--- derniers jours. Reconstitué depuis l'historique : un vélo occupe une
--- station de son arrivée à son départ suivant. Mesure à la demi-heure de
--- chaque tranche ; base = bornes actuellement en service.
--- [écriture optimisée ; la version de référence, plus lente, est conservée dans
---  performances/sans_optimisation.sql pour le rapport de performances]
--- Version de référence (lente) : pour chaque station et chaque instant
--- (30 j x 24 h), un comptage parmi TOUS les séjours de l'historique, et une
--- sous-requête par mouvement pour trouver le premier départ de chaque vélo.
--- Écriture retenue :
---   - seuls les séjours qui touchent la fenêtre de 30 jours sont gardés ;
---   - le premier départ de chaque vélo est un MIN() lu dans l'index
---     (id_velo, date_heure_depart) ;
---   - seuls les mouvements partis pendant la fenêtre (index sur
---     date_heure_depart), plus le dernier départ de chaque vélo avant elle,
---     passent par LEAD() : pas de fenêtre glissante sur tout l'historique ;
---   - le comptage ne joint plus séjours et instants par intervalle (coût
---     séjours x instants) : chaque séjour donne +1 au premier instant qui
---     suit son arrivée et -1 au premier instant qui suit son départ, et le
---     nombre de vélos présents est la somme cumulée de ces variations
---     (SUM() OVER), station par station. Coût : séjours + stations x instants.
--- Sur le jeu par défaut (122 stations, 360 000 mouvements) : 37 s -> 2,7 s,
--- résultat identique.
+-- Taux de remplissage moyen des stations par tranche horaire, sur 30 jours,
+-- reconstitué depuis l'historique (un vélo occupe une station de son arrivée
+-- à son départ suivant ; mesure à la demi-heure ; base = bornes en service).
+-- Optimisée : seuls les séjours de la fenêtre, comptés par somme cumulée
+-- (+1 à l'arrivée, -1 au départ) au lieu d'une jointure par intervalle.
 CREATE VIEW v_stat_remplissage_horaire AS
 WITH RECURSIVE jours (jour) AS (
   SELECT CURDATE() - INTERVAL 29 DAY

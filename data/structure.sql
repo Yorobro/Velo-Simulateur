@@ -1,28 +1,13 @@
 -- =============================================================================
 --  Réseau de vélos en libre-service — STRUCTURE DE LA BASE
 -- =============================================================================
---  Traduction en SQL du MLD (mld.md), lui-même issu du MCD (mcd.mmd).
---  SGBD cible : MySQL 8.4 LTS et MySQL 9.x (testé sur MySQL 9.0).
---  Moteur InnoDB, jeu de caractères utf8mb4.
---
---  Ce script ne contient que la structure et les contraintes déclaratives :
---  clés primaires et étrangères, NOT NULL, UNIQUE, CHECK, types ENUM.
---  Les règles qui portent sur plusieurs tables (triggers) et les index
---  d'optimisation viendront plus tard ; elles sont listées à la fin du fichier.
---
---  Conventions :
---    - noms de tables et de colonnes en minuscules (portable Windows / Linux) ;
---    - pk_ / fk_ / uq_ / ck_ : préfixes des noms de contraintes ;
---    - énumérations du MCD -> type ENUM (refusé hors liste en mode strict,
---      mode par défaut de MySQL 8 et 9) ;
---    - clé étrangère sans action : la suppression d'une ligne référencée est
---      refusée (historique protégé). ON DELETE CASCADE n'est utilisé que pour
---      les sous-classes (une ligne fille n'existe pas sans sa ligne mère) et
---      pour les bornes d'une station.
---
---  Remarque MySQL : une colonne utilisée dans un CHECK ne peut pas porter
---  d'action ON DELETE / ON UPDATE. Les clés étrangères concernées (facture,
---  vélo, mouvement) restent donc sans action.
+--  Traduction du MLD (3_mld.md). MySQL 8.4, InnoDB, utf8mb4.
+--  Contraintes déclaratives seulement : les règles sur plusieurs tables
+--  (R1 à R22) sont dans automatisation.sql.
+--  Préfixes des contraintes : pk_, fk_, uq_, ck_.
+--  Une ligne encore référencée ne peut pas être supprimée. ON DELETE CASCADE
+--  seulement pour les sous-classes et les bornes d'une station (MySQL refuse
+--  une action ON DELETE sur une colonne utilisée dans un CHECK).
 -- =============================================================================
 
 -- Attention : recrée la base de zéro (toutes les données sont supprimées).
@@ -401,66 +386,3 @@ CREATE TABLE intervention_station (
     REFERENCES signalement_station (id_signalement)
 ) ENGINE = InnoDB
   COMMENT = 'Sous-classe d''intervention : travaux sur une station (date_heure_fin NULL = en cours)';
-
-
--- =============================================================================
---  Règles du sujet et du MLD (V2/mld.md, § 4) qui ne peuvent pas s'écrire en
---  contrainte déclarative. Elles sont implémentées par les triggers et les
---  procédures de automatisation.sql ; les jeux de données (donnes.sql,
---  peuplement_velo.py) les respectent déjà.
--- =============================================================================
---  Locations
---    R1  un usager n'a qu'une location en cours à la fois ;
---    R2  il faut un abonnement valide (date_debut <= jour du départ <= date_fin),
---        appartenant à l'usager ;
---    R3  un vélo dont le dernier état est DEFECTUEUX ou REFORME ne peut pas
---        être emprunté ;
---    R4  durée et coût calculés à la restitution ; facture.montant = coût du
---        trajet (tranches au-delà de la durée gratuite + suppléments électrique
---        et casque).
---  Flotte
---    R5  un vélo n'est qu'à un seul endroit : velo.(id_station, numero_borne)
---        = borne d'arrivée de son dernier mouvement, NULL pendant un mouvement ;
---    R6  un vélo ne part que de la borne où il se trouve, et n'arrive que sur
---        une borne libre et EN_SERVICE d'une station EN_SERVICE ; une location
---        part d'une borne et d'une station en service ;
---    R7  un vélo n'a qu'un mouvement en cours à la fois.
---  Généralisations
---    R8  un mouvement est une location, un transfert OU le mouvement d'une
---        intervention sur vélo, jamais deux à la fois ;
---    R9  un signalement est dans signalement_velo OU signalement_station
---        (exactement une des deux) ;
---    R10 une intervention est dans intervention_velo OU intervention_station
---        (exactement une des deux).
---  Cohérence entre tables
---    R11 abonnement.date_fin = date_debut + formule.duree_validite_jours - 1 ;
---        un renouvellement appartient au même usager et commence après la fin
---        du précédent ;
---    R12 tournée effectuée par un OPERATEUR_REGULATION ou un ADMINISTRATEUR,
---        intervention par un OPERATEUR_MAINTENANCE ou un ADMINISTRATEUR ;
---        seul un USAGER s'abonne et émet un signalement ;
---    R13 un signalement de vélo et l'intervention qui le traite concernent le
---        même vélo (via intervention_velo -> mouvement) ;
---    R14 une intervention commence après le signalement qu'elle traite ;
---        les transferts d'une tournée ont lieu pendant la tournée.
---  Régulation
---    R15 les vélos chargés (transferts en cours) ne dépassent pas la capacité
---        du véhicule de la tournée ;
---    R16 un véhicule et un opérateur n'ont qu'une tournée en cours à la fois ;
---    R17 une tournée n'est clôturée qu'une fois tous ses vélos déposés.
---  Facturation, maintenance, historisation
---    R18 tout abonnement a sa facture (créée avec lui) ; toute location
---        terminée a sa facture, même à 0 € ;
---    R19 fin d'une intervention sur vélo : EN_SERVICE s'il revient sur une
---        borne, REFORME sinon ; les signalements traités sont clos ;
---    R20 mise en service -> premier état EN_SERVICE ; un signalement de vélo
---        le passe DEFECTUEUX ; un signalement clos sans intervention (fausse
---        alerte) le remet EN_SERVICE s'il n'en reste pas d'autre ouvert ;
---    R21 une station a au moins une borne.
---  Abonnements
---    R22 un usager n'a qu'un abonnement à la fois : les périodes
---        [date_debut, date_fin] de ses abonnements ne se chevauchent pas.
---        Renouveler reste possible (le renouvellement commence après la fin
---        du précédent) ; changer de formule programme le nouvel abonnement
---        au lendemain de la fin de l'actuel.
--- =============================================================================
